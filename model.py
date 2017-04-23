@@ -1,3 +1,7 @@
+import argparse
+import os
+directory = os.path.dirname(os.path.abspath(__file__))
+
 import keras
 from keras.callbacks import CSVLogger
 from keras.models import model_from_json
@@ -52,13 +56,15 @@ class CNN(object):
 
 		self.model = model
 
-	def fit(self):
+	def fit(self, epochs):
 		csv_logger = CSVLogger('training.log')
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
-			callbacks=[csv_logger])
+			callbacks=[csv_logger],
+			epochs=epochs,
+		)
 
 class Dataset(object):
 
@@ -70,6 +76,8 @@ class Dataset(object):
 		self.train_idx = random.sample(range(len(self.files)), int(len(self.files) * (1 - self.test_ratio)))
 		self.train_set = [f for i, f in enumerate(list_files) if i in self.train_idx]
 		self.test_set = [f for i, f in enumerate(list_files) if i not in self.train_idx]
+		with open(directory + '/train-idx.csv', 'w') as f:
+			f.write(','.join([str(i) for i in self.train_idx]))
 
 	def _get_labels(self):
 		labels = ['water', 'cloudy', 'partly_cloudy', 'haze', 'selective_logging', 'agriculture', 'blooming', 'cultivation', 'habitation', 'road', 'bare_ground', 'clear', 'conventional_mine', 'artisinal_mine', 'slash_burn', 'primary', 'blow_down']
@@ -101,14 +109,22 @@ class Dataset(object):
 	def testing(self):
 		pass
 
+parser = argparse.ArgumentParser(description='train model')
+parser.add_argument('-e', '--epochs', default=10, help='the number of epoch for fitting', type=int)
+
 if __name__ == "__main__":
-	DATA_DIR = "./train-jpg-sample"
-	LABEL_FILE = "train.csv"
+	args = vars(parser.parse_args())
+	print('args', args)
+
+	epochs = args['epochs']
+
+	DATA_DIR = "./rawInput/train-jpg"
+	LABEL_FILE = "./rawInput/train.csv"
 
 	list_imgs = os.listdir(DATA_DIR)
 	list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
 	data = Dataset(list_imgs, LABEL_FILE)
 	cnn = CNN(data)
-	cnn.fit()
+	cnn.fit(epochs)
 	cnn.model.save_weights("model.h5", overwrite=True)
 
