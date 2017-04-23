@@ -2,7 +2,7 @@ import keras
 from keras.callbacks import CSVLogger
 from keras.models import model_from_json
 from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation, Flatten
+from keras.layers.core import Dense, Dropout, Activation, Flatten, Lambda
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.optimizers import SGD , Adam
 from keras import backend as K
@@ -33,6 +33,7 @@ class CNN(object):
 			self.input_shape = (IMG_ROWS, IMG_COLS, CHANNELS)
 
 		model = Sequential()
+		model.add(Lambda(lambda x: x / 127.5 -1, output_shape=self.input_shape, input_shape=self.input_shape))
 		model.add(Conv2D(32, kernel_size=(3, 3),
 		                 activation='relu',
 		                 input_shape=self.input_shape))
