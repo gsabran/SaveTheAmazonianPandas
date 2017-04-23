@@ -5,9 +5,9 @@ labels = ['water', 'cloudy', 'partly_cloudy', 'haze', 'selective_logging', 'agri
 labels.sort()
 
 with open(directory + '/../rawInput/train.csv') as f, open(directory + '/../rawInput/trained-processed.csv', 'w') as f2:
-  f2.write('image_name,' + ','.join(labels) + '\n')
-  f.readline()
-  for l in f:
-    filename, rawTags = l.strip().split(',')
-    tags = rawTags.split(' ')
-    f2.write(filename + ',' + ','.join(['1' if tag in tags else '0' for tag in labels]) + '\n')
+	f2.write('image_name,' + ','.join(labels) + '\n')
+	f.readline()
+	for l in f:
+		filename, rawTags = l.strip().split(',')
+		tags = rawTags.split(' ')
+		f2.write(filename + ',' + ','.join(['1' if tag in tags else '0' for tag in labels]) + '\n')

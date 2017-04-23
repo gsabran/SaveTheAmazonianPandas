@@ -3,3 +3,7 @@
 ```bash
 python ./data-processing/process.py
 ```
+
+# Settings
+- python 3
+- tab indentation
