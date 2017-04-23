@@ -1,0 +1,1 @@
+Raw input data should go in that folder
