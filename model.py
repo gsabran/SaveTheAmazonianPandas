@@ -5,11 +5,14 @@ directory = os.path.dirname(os.path.abspath(__file__))
 import keras
 from keras.callbacks import CSVLogger
 from keras.models import model_from_json
-from keras.models import Sequential
+from keras.models import Sequential, Model
+from keras.layers import Input
 from keras.layers.core import Dense, Dropout, Activation, Flatten, Lambda
 from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.layers.merge import Concatenate
 from keras.optimizers import SGD , Adam
 from keras import backend as K
+import tensorflow as tf
 
 from skimage.io import imread, imshow, imsave, show
 
@@ -25,6 +28,42 @@ CHANNELS = 3
 NUM_TAGS = 13
 NUM_WEATHER = 4
 BATCH_SIZE = 64
+N_GPU = 8
+
+# see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
+def slice_batch(x, n_gpus, part):
+	"""
+	Divide the input batch into [n_gpus] slices, and obtain slice no. [part].
+	i.e. if len(x)=10, then slice_batch(x, 2, 1) will return x[5:].
+	"""
+	sh = K.shape(x)
+	L = sh[0] // n_gpus
+	if part == n_gpus - 1:
+		return x[part*L:]
+	return x[part*L:(part+1)*L]
+
+
+def to_multi_gpu(model, n_gpus=N_GPU):
+	"""Given a keras [model], return an equivalent model which parallelizes
+	the computation over [n_gpus] GPUs.
+
+	Each GPU gets a slice of the input batch, applies the model on that slice
+	and later the outputs of the models are concatenated to a single tensor, 
+	hence the user sees a model that behaves the same as the original.
+	"""
+	with tf.device('/cpu:0'):
+		x = Input(model.input_shape[1:])
+
+	towers = []
+	for g in range(n_gpus):
+		with tf.device('/gpu:' + str(g)):
+			slice_g = Lambda(slice_batch, lambda shape: shape, arguments={'n_gpus':n_gpus, 'part':g})(x)
+			towers.append(model(slice_g))
+
+	with tf.device('/cpu:0'):
+		merged = Concatenate(axis=0)(towers)
+
+	return Model(inputs=[x], outputs=[merged])
 
 class CNN(object):
 
@@ -39,8 +78,8 @@ class CNN(object):
 		model = Sequential()
 		model.add(Lambda(lambda x: x / 127.5 -1, output_shape=self.input_shape, input_shape=self.input_shape))
 		model.add(Conv2D(32, kernel_size=(3, 3),
-		                 activation='relu',
-		                 input_shape=self.input_shape))
+										 activation='relu',
+										 input_shape=self.input_shape))
 
 		model.add(Conv2D(64, (3, 3), activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -49,10 +88,10 @@ class CNN(object):
 		model.add(Dense(128, activation='relu'))
 		model.add(Dropout(0.5))
 		model.add(Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid'))
-
+		model = to_multi_gpu(model)
 		model.compile(loss=keras.losses.binary_crossentropy,
-		              optimizer=keras.optimizers.Adadelta(),
-		              metrics=['binary_crossentropy'])
+									optimizer=keras.optimizers.Adadelta(),
+									metrics=['binary_crossentropy'])
 
 		self.model = model
 
