@@ -29,6 +29,9 @@ NUM_TAGS = 13
 NUM_WEATHER = 4
 BATCH_SIZE = 64
 N_GPU = 8
+N_EPOCH = 10
+TEST_RATIO = 0.2
+
 
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
 def slice_batch(x, n_gpus, part):
@@ -95,14 +98,14 @@ class CNN(object):
 
 		self.model = model
 
-	def fit(self, epochs):
-		csv_logger = CSVLogger('training.log')
+	def fit(self):
+		csv_logger = CSVLogger('train/training.log')
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger],
-			epochs=epochs,
+			epochs=N_EPOCH,
 		)
 
 class Dataset(object):
@@ -110,12 +113,12 @@ class Dataset(object):
 	def __init__(self, list_files, labels_file):
 		self.labels_file = labels_file
 		self.labels = self._get_labels()
-		self.test_ratio = 0.2
+		self.test_ratio = TEST_RATIO
 		self.files = list_files
 		self.train_idx = random.sample(range(len(self.files)), int(len(self.files) * (1 - self.test_ratio)))
 		self.train_set = [f for i, f in enumerate(list_files) if i in self.train_idx]
 		self.test_set = [f for i, f in enumerate(list_files) if i not in self.train_idx]
-		with open(directory + '/train-idx.csv', 'w') as f:
+		with open(directory + '/train/train-idx.csv', 'w') as f:
 			f.write(','.join([str(i) for i in self.train_idx]))
 
 	def _get_labels(self):
@@ -148,14 +151,21 @@ class Dataset(object):
 	def testing(self):
 		pass
 
-parser = argparse.ArgumentParser(description='train model')
-parser.add_argument('-e', '--epochs', default=10, help='the number of epoch for fitting', type=int)
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='train model')
+	parser.add_argument('-e', '--epochs', default=N_EPOCH, help='the number of epochs for fitting', type=int)
+	parser.add_argument('-b', '--batch-size', default=BATCH_SIZE, help='the number items per training batch', type=int)
+	parser.add_argument('-t', '--test-ratio', default=TEST_RATIO, help='the proportion of labeled input kept aside of training for testing', type=float)
+	parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)	
+
 	args = vars(parser.parse_args())
 	print('args', args)
 
-	epochs = args['epochs']
+	N_EPOCH = args['epochs']
+	BATCH_SIZE = args['batch_size']
+	TEST_RATIO = args['test_ratio']
+	N_GPU = min(N_GPU, args['gpu'])
 
 	DATA_DIR = "./rawInput/train-jpg"
 	LABEL_FILE = "./rawInput/train.csv"
@@ -164,6 +174,7 @@ if __name__ == "__main__":
 	list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
 	data = Dataset(list_imgs, LABEL_FILE)
 	cnn = CNN(data)
-	cnn.fit(epochs)
-	cnn.model.save_weights("model.h5", overwrite=True)
+	cnn.fit()
+	cnn.model.save_weights("train/model.h5", overwrite=True)
+	print('Done running')
 

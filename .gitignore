@@ -1,2 +1,4 @@
 rawInput/*
 !rawInput/README.md
+train/*
+!train/README.md
