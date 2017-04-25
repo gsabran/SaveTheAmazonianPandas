@@ -1,3 +1,4 @@
+import tqdm
 import argparse
 import os
 import numpy as np
@@ -31,11 +32,13 @@ if __name__ == "__main__":
 		print(cnn.model.predict(img))
 	else:
 		list_imgs = [f for f in os.listdir(DATA_DIR) if (".jpg" in f or ".tif" in f)]
+		imgs = [imread(os.path.join(DATA_DIR, f_img)).reshape((1,256,256,3)) for f_img in list_imgs]
 		with open("./test/predict.csv", "w") as pred_f:
 			pred_f.write("image_name,tags\n")
-			for f_img in list_imgs:
-				img = imread(os.path.join(DATA_DIR, f_img))
-				img = img.reshape((1, 256, 256, 3))
-				y_hat = np.array(cnn.model.predict(img)).reshape((len(LABELS),))
-				weather, other_tags = get_pred(y_hat)
-				pred_f.write("{f},{w} {other}\n".format(f=f_img.split(".")[0], w=weather, other=" ".join(other_tags)))
+			with tqdm(total=len(list_imgs)) as pbar:
+				for f_img, img in zip(list_imgs, imgs):
+					y_hat = np.array(cnn.model.predict(img)).reshape((len(LABELS),))
+					weather, other_tags = get_pred(y_hat)
+					pred_f.write("{f},{w} {other}\n".format(f=f_img.split(".")[0], w=weather, other=" ".join(other_tags)))
+					pbar.update(1)
+		print("Done predicting")
