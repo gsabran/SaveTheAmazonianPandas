@@ -2,3 +2,8 @@ rawInput/*
 !rawInput/README.md
 train/*
 !train/README.md
+
+# sublime text config
+*.sublime-project
+*.sublime-workspace
+sftp-config.json
