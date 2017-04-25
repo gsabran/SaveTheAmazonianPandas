@@ -1,6 +1,11 @@
 from tqdm import tqdm
 import argparse
 import os
+
+# This forces predicting on CPUs instead of GPUs
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 import numpy as np
 from model import CNN, TRAINED_MODEL, LABELS
 from skimage.io import imread, imshow, imsave, show
