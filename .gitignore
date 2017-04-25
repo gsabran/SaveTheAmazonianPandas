@@ -2,3 +2,5 @@ rawInput/*
 !rawInput/README.md
 train/*
 !train/README.md
+train-jpg-sample/*
+*.pyc
