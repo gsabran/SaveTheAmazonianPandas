@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import argparse
 import os
+from shutil import copyfile
 from utils import getUniqName
 from keras import backend as K
 
@@ -47,13 +48,27 @@ if __name__ == "__main__":
 					imgs.append(imread(os.path.join(DATA_DIR, f_img)))
 					pbar.update(1)
 			print("Starting predictions...")
-			predictionFile = "./test/{x}-predict.csv".format(x=getUniqName())
-			with open(predictionFile, "w") as pred_f:
-				pred_f.write("image_name,tags\n")
+			testId = getUniqName()
+			predictionFile = "./test/archive/{x}-predict.csv".format(x=testId)
+			rawPredictionFile = "./test/archive/{x}-predict-raw.csv".format(x=testId)
+			os.makedirs(os.path.dirname(predictionFile), exist_ok=True)
+
+			with open(predictionFile, "w") as pred_f, open(rawPredictionFile, "w") as raw_pred_f:
+				pred_f.write("image_name, tags\n")
+				raw_pred_f.write("image_name,{tags}\n".format(tags=", ".join(LABELS)))
 
 				# larger batch size (relatively to the number of GPU) run out of memory
-				prediction = cnn.model.predict(np.array(imgs), batch_size=1024, verbose=1)
-				allTags = get_pred(np.array(prediction))
+				predictions = cnn.model.predict(np.array(imgs), batch_size=1024, verbose=1)
+				for f_img, prediction in zip(list_imgs, predictions):
+					raw_pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=", ".join([str(i) for i in prediction])))
+
+				allTags = get_pred(np.array(predictions))
 				for f_img, tags in zip(list_imgs, allTags):
 					pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
-			print("Done predicting. Predictions written to {f}".format(f=predictionFile))
+
+			copyfile(predictionFile, "./test/predict.csv")
+			copyfile(rawPredictionFile, "./test/predict-raw.csv")
+			print("Done predicting.")
+			print("Predictions written to {f}".format(f=predictionFile))
+			print("Raw predictions written to {f}".format(f=rawPredictionFile))
+
