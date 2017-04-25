@@ -4,10 +4,6 @@ import os
 from utils import getUniqName
 from keras import backend as K
 
-# This forces predicting on CPUs instead of GPUs
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
 import numpy as np
 from model import CNN, TRAINED_MODEL, LABELS
 from skimage.io import imread, imshow, imsave, show
@@ -54,7 +50,9 @@ if __name__ == "__main__":
 			predictionFile = "./test/{x}-predict.csv".format(x=getUniqName())
 			with open(predictionFile, "w") as pred_f:
 				pred_f.write("image_name,tags\n")
-				prediction = cnn.model.predict(np.array(imgs), batch_size=128, verbose=1)
+
+				# larger batch size (relatively to the number of GPU) run out of memory
+				prediction = cnn.model.predict(np.array(imgs), batch_size=1024, verbose=1)
 				allTags = get_pred(np.array(prediction))
 				for f_img, tags in zip(list_imgs, allTags):
 					pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
