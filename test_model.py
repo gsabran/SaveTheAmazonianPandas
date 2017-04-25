@@ -1,10 +1,8 @@
 from tqdm import tqdm
 import argparse
 import os
-
-# This forces predicting on CPUs instead of GPUs
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+from utils import getUniqName
+from keras import backend as K
 
 import numpy as np
 from model import CNN, TRAINED_MODEL, LABELS
@@ -17,33 +15,45 @@ LABELS = sorted(LABELS)
 WEATHER_IDX = [5,6,10,11]
 WEATHER_VALS = ["clear", "cloudy", "haze", "partly_cloudy"]
 
-def get_pred(y_hat):
-	weather = WEATHER_VALS[np.argmax(y_hat[WEATHER_IDX])]
-	other_tags = [LABELS[i] for i in np.where(y_hat > 0.5)[0] if i not in WEATHER_IDX]
-	return (weather, other_tags)
+
+def get_pred(y):
+	"""
+	return the label predictions for an input of shape (n, labelCount)
+	"""
+	threshold = 0.5
+	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > threshold]]
+	return (row_pred(row) for row in y)
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description="test model")
-	parser.add_argument("-f", "--file", default="", help="file to test on", type=str)
-	args = vars(parser.parse_args())
+	with K.get_session():
+		parser = argparse.ArgumentParser(description="test model")
+		parser.add_argument("-f", "--file", default="", help="file to test on", type=str)
+		args = vars(parser.parse_args())
 
-	cnn = CNN(None)
-	cnn.model.load_weights(TRAINED_MODEL)
+		cnn = CNN(None)
+		cnn.model.load_weights(TRAINED_MODEL)
 
-	if args["file"] != "":
-		img = imread(args["file"])
-		img = img.reshape((1, 256, 256, 3))
-		print("Predicting for {fn}".format(fn=args["file"]))
-		print(cnn.model.predict(img))
-	else:
-		list_imgs = [f for f in os.listdir(DATA_DIR) if (".jpg" in f or ".tif" in f)]
-		imgs = [imread(os.path.join(DATA_DIR, f_img)).reshape((1,256,256,3)) for f_img in list_imgs]
-		with open("./test/predict.csv", "w") as pred_f:
-			pred_f.write("image_name,tags\n")
+		if args["file"] != "":
+			img = imread(args["file"])
+			img = img.reshape((1, 256, 256, 3))
+			print("Predicting for {fn}".format(fn=args["file"]))
+			print(cnn.model.predict(img))
+		else:
+			print("Reading images...")
+			list_imgs = [f for f in os.listdir(DATA_DIR) if (".jpg" in f or ".tif" in f)]
+			imgs = []
 			with tqdm(total=len(list_imgs)) as pbar:
-				for f_img, img in zip(list_imgs, imgs):
-					y_hat = np.array(cnn.model.predict(img)).reshape((len(LABELS),))
-					weather, other_tags = get_pred(y_hat)
-					pred_f.write("{f},{w} {other}\n".format(f=f_img.split(".")[0], w=weather, other=" ".join(other_tags)))
+				for f_img in list_imgs:
+					imgs.append(imread(os.path.join(DATA_DIR, f_img)))
 					pbar.update(1)
-		print("Done predicting")
+			print("Starting predictions...")
+			predictionFile = "./test/{x}-predict.csv".format(x=getUniqName())
+			with open(predictionFile, "w") as pred_f:
+				pred_f.write("image_name,tags\n")
+
+				# larger batch size (relatively to the number of GPU) run out of memory
+				prediction = cnn.model.predict(np.array(imgs), batch_size=1024, verbose=1)
+				allTags = get_pred(np.array(prediction))
+				for f_img, tags in zip(list_imgs, allTags):
+					pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
+			print("Done predicting. Predictions written to {f}".format(f=predictionFile))

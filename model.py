@@ -27,7 +27,7 @@ IMG_COLS = 256
 CHANNELS = 3
 NUM_TAGS = 13
 NUM_WEATHER = 4
-BATCH_SIZE = 512
+BATCH_SIZE = 64
 N_GPU = 8
 N_EPOCH = 10
 TEST_RATIO = 0.2
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 	print('args', args)
 
 	N_EPOCH = args['epochs']
-	BATCH_SIZE = args['batch_size']
+	BATCH_SIZE = args['batch_size'] * N_GPU
 	TEST_RATIO = args['test_ratio']
 	N_GPU = min(N_GPU, args['gpu'])
 
