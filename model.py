@@ -27,10 +27,12 @@ IMG_COLS = 256
 CHANNELS = 3
 NUM_TAGS = 13
 NUM_WEATHER = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 512
 N_GPU = 8
 N_EPOCH = 10
 TEST_RATIO = 0.2
+TRAINED_MODEL = "train/model.h5"
+LABELS = ['clear', 'cloudy', 'haze', 'partly_cloudy', 'agriculture', 'artisinal_mine', 'bare_ground', 'blooming', 'blow_down', 'conventional_mine', 'cultivation', 'habitation', 'primary', 'road', 'selective_logging', 'slash_burn', 'water']
 
 
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
@@ -51,7 +53,7 @@ def to_multi_gpu(model, n_gpus=N_GPU):
 	the computation over [n_gpus] GPUs.
 
 	Each GPU gets a slice of the input batch, applies the model on that slice
-	and later the outputs of the models are concatenated to a single tensor, 
+	and later the outputs of the models are concatenated to a single tensor,
 	hence the user sees a model that behaves the same as the original.
 	"""
 	with tf.device('/cpu:0'):
@@ -70,7 +72,7 @@ def to_multi_gpu(model, n_gpus=N_GPU):
 
 class CNN(object):
 
-	def __init__(self, dataset):
+	def __init__(self, dataset, gpus=True):
 		self.data = dataset
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
@@ -91,7 +93,8 @@ class CNN(object):
 		model.add(Dense(128, activation='relu'))
 		model.add(Dropout(0.5))
 		model.add(Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid'))
-		model = to_multi_gpu(model)
+		if gpus:
+			model = to_multi_gpu(model)
 		model.compile(loss=keras.losses.binary_crossentropy,
 									optimizer=keras.optimizers.Adadelta(),
 									metrics=['binary_crossentropy'])
@@ -122,17 +125,13 @@ class Dataset(object):
 			f.write(','.join([str(i) for i in self.train_idx]))
 
 	def _get_labels(self):
-		labels = ['water', 'cloudy', 'partly_cloudy', 'haze', 'selective_logging', 'agriculture', 'blooming', 'cultivation', 'habitation', 'road', 'bare_ground', 'clear', 'conventional_mine', 'artisinal_mine', 'slash_burn', 'primary', 'blow_down']
-		labels.sort()
-
 		labels_dict = {}
-
 		with open(self.labels_file) as f:
 			f.readline()
 			for l in f:
 				filename, rawTags = l.strip().split(',')
 				tags = rawTags.split(' ')
-				labels_dict[filename] = [1 if tag in tags else 0 for tag in labels]
+				labels_dict[filename] = [1 if tag in tags else 0 for tag in LABELS]
 		return labels_dict
 
 	def training(self, image_data_fmt):
@@ -157,7 +156,7 @@ if __name__ == "__main__":
 	parser.add_argument('-e', '--epochs', default=N_EPOCH, help='the number of epochs for fitting', type=int)
 	parser.add_argument('-b', '--batch-size', default=BATCH_SIZE, help='the number items per training batch', type=int)
 	parser.add_argument('-t', '--test-ratio', default=TEST_RATIO, help='the proportion of labeled input kept aside of training for testing', type=float)
-	parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)	
+	parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)
 
 	args = vars(parser.parse_args())
 	print('args', args)
@@ -175,6 +174,6 @@ if __name__ == "__main__":
 	data = Dataset(list_imgs, LABEL_FILE)
 	cnn = CNN(data)
 	cnn.fit()
-	cnn.model.save_weights("train/model.h5", overwrite=True)
+	cnn.model.save_weights(TRAINED_MODEL, overwrite=True)
 	print('Done running')
 

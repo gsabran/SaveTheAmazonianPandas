@@ -2,7 +2,9 @@ rawInput/*
 !rawInput/README.md
 train/*
 !train/README.md
-
+train-jpg-sample/*
+*.pyc
+/test/*
 # sublime text config
 *.sublime-project
 *.sublime-workspace
