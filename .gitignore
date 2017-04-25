@@ -5,3 +5,7 @@ train/*
 train-jpg-sample/*
 *.pyc
 /test/*
+# sublime text config
+*.sublime-project
+*.sublime-workspace
+sftp-config.json
