@@ -4,3 +4,4 @@ train/*
 !train/README.md
 train-jpg-sample/*
 *.pyc
+/test/*

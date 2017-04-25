@@ -27,11 +27,12 @@ IMG_COLS = 256
 CHANNELS = 3
 NUM_TAGS = 13
 NUM_WEATHER = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 512
 N_GPU = 8
 N_EPOCH = 10
 TEST_RATIO = 0.2
 TRAINED_MODEL = "train/model.h5"
+LABELS = ['clear', 'cloudy', 'haze', 'partly_cloudy', 'agriculture', 'artisinal_mine', 'bare_ground', 'blooming', 'blow_down', 'conventional_mine', 'cultivation', 'habitation', 'primary', 'road', 'selective_logging', 'slash_burn', 'water']
 
 
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
@@ -124,17 +125,13 @@ class Dataset(object):
 			f.write(','.join([str(i) for i in self.train_idx]))
 
 	def _get_labels(self):
-		labels = ['water', 'cloudy', 'partly_cloudy', 'haze', 'selective_logging', 'agriculture', 'blooming', 'cultivation', 'habitation', 'road', 'bare_ground', 'clear', 'conventional_mine', 'artisinal_mine', 'slash_burn', 'primary', 'blow_down']
-		labels.sort()
-
 		labels_dict = {}
-
 		with open(self.labels_file) as f:
 			f.readline()
 			for l in f:
 				filename, rawTags = l.strip().split(',')
 				tags = rawTags.split(' ')
-				labels_dict[filename] = [1 if tag in tags else 0 for tag in labels]
+				labels_dict[filename] = [1 if tag in tags else 0 for tag in LABELS]
 		return labels_dict
 
 	def training(self, image_data_fmt):
