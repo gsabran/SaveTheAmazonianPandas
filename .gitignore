@@ -4,7 +4,7 @@ train/*
 !train/README.md
 train-jpg-sample/*
 *.pyc
-/test/*
+/predict/*
 # sublime text config
 *.sublime-project
 *.sublime-workspace
