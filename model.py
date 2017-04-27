@@ -1,9 +1,7 @@
 import argparse
 import os
-directory = os.path.dirname(os.path.abspath(__file__))
-
 import keras
-from keras.callbacks import CSVLogger
+from keras.callbacks import CSVLogger, ModelCheckpoint
 from keras.models import model_from_json
 from keras.models import Sequential, Model
 from keras.layers import Input
@@ -13,15 +11,18 @@ from keras.layers.merge import Concatenate
 from keras.optimizers import SGD , Adam
 from keras import backend as K
 import tensorflow as tf
-
+from shutil import copyfile
 from skimage.io import imread, imshow, imsave, show
-
 import numpy as np
-
 import random
 
-import os
+from constants import LABELS
+from utils import get_uniq_name
 
+
+directory = os.path.dirname(os.path.abspath(__file__))
+
+sessionId = get_uniq_name()
 IMG_ROWS = 256
 IMG_COLS = 256
 CHANNELS = 3
@@ -32,8 +33,7 @@ N_GPU = 8
 N_EPOCH = 10
 TEST_RATIO = 0.2
 TRAINED_MODEL = "train/model.h5"
-LABELS = ['clear', 'cloudy', 'haze', 'partly_cloudy', 'agriculture', 'artisinal_mine', 'bare_ground', 'blooming', 'blow_down', 'conventional_mine', 'cultivation', 'habitation', 'primary', 'road', 'selective_logging', 'slash_burn', 'water']
-
+os.makedirs("train/archive", exist_ok=True)
 
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
 def slice_batch(x, n_gpus, part):
@@ -104,25 +104,32 @@ class CNN(object):
 	def fit(self):
 		csv_logger = CSVLogger('train/training.log')
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
+		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
-			callbacks=[csv_logger],
+			callbacks=[csv_logger, checkpoint],
 			epochs=N_EPOCH,
 		)
 
 class Dataset(object):
 
-	def __init__(self, list_files, labels_file):
+	def __init__(self, list_files, labels_file, train_idx=None):
 		self.labels_file = labels_file
 		self.labels = self._get_labels()
 		self.test_ratio = TEST_RATIO
 		self.files = list_files
-		self.train_idx = random.sample(range(len(self.files)), int(len(self.files) * (1 - self.test_ratio)))
+
+		if train_idx is None:
+			self.train_idx = random.sample(range(len(self.files)), int(len(self.files) * (1 - self.test_ratio)))
+			with open('train/train-idx.csv', 'w') as f:
+				f.write(','.join([str(i) for i in self.train_idx]))
+		else:
+			self.train_idx = train_idx
+
 		self.train_set = [f for i, f in enumerate(list_files) if i in self.train_idx]
 		self.test_set = [f for i, f in enumerate(list_files) if i not in self.train_idx]
-		with open(directory + '/train/train-idx.csv', 'w') as f:
-			f.write(','.join([str(i) for i in self.train_idx]))
+		copyfile('train/train-idx.csv', 'train/archive/{f}-train-idx.csv'.format(f=sessionId))
 
 	def _get_labels(self):
 		labels_dict = {}
@@ -152,28 +159,38 @@ class Dataset(object):
 
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description='train model')
-	parser.add_argument('-e', '--epochs', default=N_EPOCH, help='the number of epochs for fitting', type=int)
-	parser.add_argument('-b', '--batch-size', default=BATCH_SIZE, help='the number items per training batch', type=int)
-	parser.add_argument('-t', '--test-ratio', default=TEST_RATIO, help='the proportion of labeled input kept aside of training for testing', type=float)
-	parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)
+	with K.get_session():
+		parser = argparse.ArgumentParser(description='train model')
+		parser.add_argument('-e', '--epochs', default=N_EPOCH, help='the number of epochs for fitting', type=int)
+		parser.add_argument('-b', '--batch-size', default=BATCH_SIZE, help='the number items per training batch', type=int)
+		parser.add_argument('-t', '--test-ratio', default=TEST_RATIO, help='the proportion of labeled input kept aside of training for testing', type=float)
+		parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)
+		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
 
-	args = vars(parser.parse_args())
-	print('args', args)
+		args = vars(parser.parse_args())
+		print('args', args)
 
-	N_EPOCH = args['epochs']
-	BATCH_SIZE = args['batch_size'] * N_GPU
-	TEST_RATIO = args['test_ratio']
-	N_GPU = min(N_GPU, args['gpu'])
+		N_EPOCH = args['epochs']
+		BATCH_SIZE = args['batch_size'] * N_GPU
+		N_GPU = min(N_GPU, args['gpu'])
+		TEST_RATIO = args['test_ratio']
 
-	DATA_DIR = "./rawInput/train-jpg"
-	LABEL_FILE = "./rawInput/train.csv"
+		DATA_DIR = "./rawInput/train-jpg"
+		LABEL_FILE = "./rawInput/train.csv"
+		list_imgs = sorted(os.listdir(DATA_DIR))
+		list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
 
-	list_imgs = os.listdir(DATA_DIR)
-	list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
-	data = Dataset(list_imgs, LABEL_FILE)
-	cnn = CNN(data)
-	cnn.fit()
-	cnn.model.save_weights(TRAINED_MODEL, overwrite=True)
-	print('Done running')
+		if args["model"] != '':
+			with open('train/train-idx.csv') as f_train_idx:
+			  train_idx = [int(i) for i in f_train_idx.readline().split(",")]
+			data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
+			cnn = CNN(data)
+			cnn.model.load_weights(args["model"])
+		else:
+			data = Dataset(list_imgs, LABEL_FILE)
+			cnn = CNN(data)
 
+		cnn.fit()
+		cnn.model.save_weights(TRAINED_MODEL, overwrite=True)
+		copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
+		print('Done running')

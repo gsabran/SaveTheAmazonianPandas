@@ -1,8 +1,11 @@
 import subprocess
 import time
 import string
+import numpy as np
 
-def getUniqName():
+from constants import LABELS, WEATHER_IDX
+
+def get_uniq_name():
 	"""
 	A uniq name to diffenrenciate generated files
 	"""
@@ -14,3 +17,11 @@ def getUniqName():
 
 	t = time.strftime("%Y-%m-%d.%H:%M:%S")
 	return "{t}-{h}-{m}".format(t=t, h=gitHash, m=gitMessage).lower().replace(" ", "_")
+
+
+def get_predictions(y, threshold=0.5):
+	"""
+	return the label predictions for an input of shape (n, labelCount)
+	"""
+	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > threshold]]
+	return (row_pred(row) for row in y)
