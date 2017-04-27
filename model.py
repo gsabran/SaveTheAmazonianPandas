@@ -1,7 +1,7 @@
 import argparse
 import os
 import keras
-from keras.callbacks import CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 from keras.models import model_from_json
 from keras.models import Sequential, Model
 from keras.layers import Input
@@ -34,6 +34,7 @@ N_EPOCH = 10
 TEST_RATIO = 0.2
 TRAINED_MODEL = "train/model.h5"
 os.makedirs("train/archive", exist_ok=True)
+os.makedirs("train/tensorboard", exist_ok=True)
 
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
 def slice_batch(x, n_gpus, part):
@@ -102,13 +103,16 @@ class CNN(object):
 		self.model = model
 
 	def fit(self):
-		csv_logger = CSVLogger('train/training.log')
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
+
+		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
+		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
+
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
-			callbacks=[csv_logger, checkpoint],
+			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=N_EPOCH,
 		)
 
