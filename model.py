@@ -114,7 +114,7 @@ class CNN(object):
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
-			epochs=N_EPOCH,
+			epochs=N_EPOCH
 		)
 
 class XceptionCNN(object):
@@ -160,7 +160,7 @@ class XceptionCNN(object):
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
-			epochs=5,
+			epochs=5
 		)
 
 		for layer in self.model.layers[:54]:
@@ -178,7 +178,7 @@ class XceptionCNN(object):
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
-			epochs=N_EPOCH,
+			epochs=N_EPOCH
 		)
 
 class Dataset(object):
