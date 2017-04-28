@@ -2,7 +2,7 @@ import argparse
 import os
 import keras
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
-from keras.models import model_from_json
+from keras.models import model_from_json, load_model
 from keras.models import Sequential, Model
 from keras.layers import Input, GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout, Activation, Flatten, Lambda
@@ -119,6 +119,7 @@ class CNN(object):
 
 class XceptionCNN(object):
 	def __init__(self, dataset, gpus=True):
+		self.data = dataset
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
 			self.input_shape = (CHANNELS, IMG_ROWS, IMG_COLS)
@@ -255,7 +256,7 @@ if __name__ == "__main__":
 			with open('train/train-idx.csv') as f_train_idx:
 				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
 				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
-			cnn = load_model(args['model'])
+			cnn.model = load_model(args['model'])
 
 		cnn.fit()
 		cnn.model.save(TRAINED_MODEL, overwrite=True)
