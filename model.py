@@ -245,24 +245,19 @@ if __name__ == "__main__":
 		list_imgs = sorted(os.listdir(DATA_DIR))
 		list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
 
-		if args["model"] != '':
-			with open('train/train-idx.csv') as f_train_idx:
-				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
-				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
-		else:
-			data = Dataset(list_imgs, LABEL_FILE)
-
+		data = Dataset(list_imgs, LABEL_FILE)
 		if args["cnn"] == "xception":
 			cnn = XceptionCNN(data)
 		else:
 			cnn = CNN(data)
 
 		if args["model"] != '':
-			cnn.model.load_weights(args["model"])
-		else:
-			cnn = CNN(data)
+			with open('train/train-idx.csv') as f_train_idx:
+				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
+				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
+			cnn = load_model(args['model'])
 
 		cnn.fit()
-		cnn.model.save_weights(TRAINED_MODEL, overwrite=True)
+		cnn.model.save(TRAINED_MODEL, overwrite=True)
 		copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
 		print('Done running')
