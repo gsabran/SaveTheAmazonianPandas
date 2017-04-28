@@ -143,8 +143,6 @@ class XceptionCNN(object):
 		# i.e. freeze all convolutional InceptionV3 layers
 		for layer in base_model.layers:
 		    layer.trainable = False
-		if gpus:
-			model = to_multi_gpu(model)
 		# compile the model (should be done *after* setting layers to non-trainable)
 		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
 
