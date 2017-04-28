@@ -155,6 +155,7 @@ class XceptionCNN(object):
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
 		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
+		print("Fitting top dense layers")
 		self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
@@ -165,7 +166,7 @@ class XceptionCNN(object):
 			layer.trainable = False
 		for layer in self.model.layers[54:]:
 			layer.trainable = True
-
+		print("Fitting lower conv layers")
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
@@ -248,11 +249,14 @@ if __name__ == "__main__":
 
 		data = Dataset(list_imgs, LABEL_FILE)
 		if args["cnn"] == "xception":
+			print("Using Xception architecture")
 			cnn = XceptionCNN(data)
 		else:
+			print("Using simple model architecture")
 			cnn = CNN(data)
 
 		if args["model"] != '':
+			print("Loading model {m}".format(m=args['model']))
 			with open('train/train-idx.csv') as f_train_idx:
 				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
 				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
