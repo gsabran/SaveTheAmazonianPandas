@@ -50,7 +50,7 @@ if __name__ == "__main__":
 					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(LABELS)))
 
 					# larger batch size (relatively to the number of GPU) run out of memory
-					predictions = cnn.model.predict(np.array(imgs), batch_size=256, verbose=1)
+					predictions = cnn.model.predict(np.array(imgs), batch_size=64, verbose=1)
 					for f_img, prediction in zip(list_imgs, predictions):
 						raw_pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join([str(i) for i in prediction])))
 
