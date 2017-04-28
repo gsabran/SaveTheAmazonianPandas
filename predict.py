@@ -46,17 +46,17 @@ if __name__ == "__main__":
 				os.makedirs(os.path.dirname(predictionFile), exist_ok=True)
 
 				with open(predictionFile, "w") as pred_f, open(rawPredictionFile, "w") as raw_pred_f:
-					pred_f.write("image_name, tags\n")
-					raw_pred_f.write("image_name, {tags}\n".format(tags=" ".join(LABELS)))
+					pred_f.write("image_name,tags\n")
+					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(LABELS)))
 
 					# larger batch size (relatively to the number of GPU) run out of memory
 					predictions = cnn.model.predict(np.array(imgs), batch_size=256, verbose=1)
 					for f_img, prediction in zip(list_imgs, predictions):
-						raw_pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=" ".join([str(i) for i in prediction])))
+						raw_pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join([str(i) for i in prediction])))
 
 					allTags = get_predictions(np.array(predictions))
 					for f_img, tags in zip(list_imgs, allTags):
-						pred_f.write("{f}, {tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
+						pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 						pbar.update(1)
 
 			copyfile(predictionFile, "./predict/archive/{x}-{d}-predict.csv".format(x=testId, d=args["data"]))
