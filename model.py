@@ -120,6 +120,7 @@ class CNN(object):
 class XceptionCNN(object):
 	def __init__(self, dataset, gpus=True):
 		self.data = dataset
+		self.gpus = gpus
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
 			self.input_shape = (CHANNELS, IMG_ROWS, IMG_COLS)
@@ -163,10 +164,17 @@ class XceptionCNN(object):
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=5,
 		)
+
 		for layer in self.model.layers[:54]:
 			layer.trainable = False
 		for layer in self.model.layers[54:]:
 			layer.trainable = True
+
+		if self.gpus:
+			self.model = to_multi_gpu(self.model)
+
+		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
 		print("Fitting lower conv layers")
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
@@ -174,10 +182,6 @@ class XceptionCNN(object):
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=N_EPOCH,
 		)
-
-		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
-
-
 
 class Dataset(object):
 
