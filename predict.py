@@ -8,7 +8,7 @@ from skimage.io import imread, imshow, imsave, show
 from keras.models import load_model
 from constants import LABELS
 from utils import get_uniq_name, get_predictions
-from model import CNN, TRAINED_MODEL, IMG_ROWS, IMG_COLS, CHANNELS
+from model import CNN, TRAINED_MODEL, IMG_ROWS, IMG_COLS, CHANNELS, ModelCNN
 
 TEST_DATA_DIR = "./rawInput/test-jpg"
 TRAIN_DATA_DIR = "./rawInput/train-jpg"
