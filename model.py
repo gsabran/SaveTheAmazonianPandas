@@ -37,6 +37,9 @@ TRAINED_MODEL = "train/model.h5"
 os.makedirs("train/archive", exist_ok=True)
 os.makedirs("train/tensorboard", exist_ok=True)
 
+class ModelCNN(object):
+	pass
+
 # see https://github.com/fchollet/keras/issues/2436#issuecomment-291874528
 def slice_batch(x, n_gpus, part):
 	"""
@@ -72,7 +75,7 @@ def to_multi_gpu(model, n_gpus=N_GPU):
 
 	return Model(inputs=[x], outputs=[merged])
 
-class CNN(object):
+class CNN(ModelCNN):
 
 	def __init__(self, dataset, gpus=True):
 		self.data = dataset
@@ -117,7 +120,7 @@ class CNN(object):
 			epochs=N_EPOCH
 		)
 
-class XceptionCNN(object):
+class XceptionCNN(ModelCNN):
 	def __init__(self, dataset, gpus=True):
 		self.data = dataset
 		self.gpus = gpus

@@ -5,10 +5,10 @@ from shutil import copyfile
 from keras import backend as K
 import numpy as np
 from skimage.io import imread, imshow, imsave, show
-
+from keras.models import load_model
 from constants import LABELS
 from utils import get_uniq_name, get_predictions
-from model import CNN, TRAINED_MODEL
+from model import CNN, TRAINED_MODEL, IMG_ROWS, IMG_COLS, CHANNELS
 
 TEST_DATA_DIR = "./rawInput/test-jpg"
 TRAIN_DATA_DIR = "./rawInput/train-jpg"
@@ -22,12 +22,12 @@ if __name__ == "__main__":
 		args = vars(parser.parse_args())
 		print('args', args)
 
-		cnn = CNN(None)
-		cnn.model.load_weights(args["model"])
+		cnn = ModelCNN()
+		cnn.model = load_model(args["model"])
 
 		if args["file"] != "":
 			img = imread(args["file"])
-			img = img.reshape((1, 256, 256, 3))
+			img = img.reshape((1, IMG_ROWS, IMG_COLS, CHANNELS))
 			print("Predicting for {fn}".format(fn=args["file"]))
 			print(cnn.model.predict(img))
 		else:
