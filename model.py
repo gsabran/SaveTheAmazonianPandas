@@ -165,7 +165,7 @@ class XceptionCNN(object):
 		for layer in self.model.layers[54:]:
 			layer.trainable = True
 
-		self.model.fit(x_train, y_train,
+		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
