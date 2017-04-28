@@ -29,7 +29,7 @@ IMG_COLS = 256
 CHANNELS = 3
 NUM_TAGS = 13
 NUM_WEATHER = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 24
 N_GPU = 8
 N_EPOCH = 10
 TEST_RATIO = 0.0
@@ -153,13 +153,28 @@ class XceptionCNN(object):
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
+		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
+		self.model.fit(x_train, y_train,
+			batch_size=BATCH_SIZE,
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=5,
+		)
+		for layer in self.model.layers[:54]:
+			layer.trainable = False
+		for layer in self.model.layers[54:]:
+			layer.trainable = True
 
-		return self.model.fit(x_train, y_train,
+		self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=N_EPOCH,
 		)
+
+		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
+
 
 class Dataset(object):
 
@@ -225,7 +240,7 @@ if __name__ == "__main__":
 		N_GPU = min(N_GPU, args['gpu'])
 		TEST_RATIO = args['test_ratio']
 
-		DATA_DIR = "./rawInput/train-jpg-sample"
+		DATA_DIR = "./rawInput/train-jpg"
 		LABEL_FILE = "./rawInput/train.csv"
 		list_imgs = sorted(os.listdir(DATA_DIR))
 		list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
