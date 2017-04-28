@@ -1,6 +1,7 @@
 rawInput/*
 !rawInput/README.md
 train/*
+train-tif/*
 !train/README.md
 train-jpg-sample/*
 *.pyc

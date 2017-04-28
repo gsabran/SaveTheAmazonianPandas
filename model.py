@@ -4,12 +4,13 @@ import keras
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 from keras.models import model_from_json
 from keras.models import Sequential, Model
-from keras.layers import Input
+from keras.layers import Input, GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout, Activation, Flatten, Lambda
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.merge import Concatenate
 from keras.optimizers import SGD , Adam
 from keras import backend as K
+from keras.applications.xception import Xception
 import tensorflow as tf
 from shutil import copyfile
 from skimage.io import imread, imshow, imsave, show
@@ -31,7 +32,7 @@ NUM_WEATHER = 4
 BATCH_SIZE = 64
 N_GPU = 8
 N_EPOCH = 10
-TEST_RATIO = 0.2
+TEST_RATIO = 0.0
 TRAINED_MODEL = "train/model.h5"
 os.makedirs("train/archive", exist_ok=True)
 os.makedirs("train/tensorboard", exist_ok=True)
@@ -116,6 +117,50 @@ class CNN(object):
 			epochs=N_EPOCH,
 		)
 
+class XceptionCNN(object):
+	def __init__(self, dataset, gpus=True):
+		self.image_data_fmt = K.image_data_format()
+		if self.image_data_fmt == 'channels_first':
+			self.input_shape = (CHANNELS, IMG_ROWS, IMG_COLS)
+		else:
+			self.input_shape = (IMG_ROWS, IMG_COLS, CHANNELS)
+		base_model = Xception(include_top=False, input_shape=self.input_shape)
+
+		# add a global spatial average pooling layer
+		x = base_model.output
+		x = GlobalAveragePooling2D()(x)
+		# let's add a fully-connected layer
+		x = Dense(1024, activation='relu')(x)
+		# and a logistic layer -- let's say we have 200 classes
+		predictions = Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid')(x)
+
+		# this is the model we will train
+		model = Model(inputs=base_model.input, outputs=predictions)
+
+		# first: train only the top layers (which were randomly initialized)
+		# i.e. freeze all convolutional InceptionV3 layers
+		for layer in base_model.layers:
+		    layer.trainable = False
+
+		# compile the model (should be done *after* setting layers to non-trainable)
+		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
+		self.model = model
+
+	def fit(self):
+		(x_train, y_train) = self.data.training(self.image_data_fmt)
+
+		csv_logger = CSVLogger('train/training.log')
+		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
+		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
+
+		return self.model.fit(x_train, y_train,
+			batch_size=BATCH_SIZE,
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=N_EPOCH,
+		)
+
 class Dataset(object):
 
 	def __init__(self, list_files, labels_file, train_idx=None):
@@ -170,6 +215,7 @@ if __name__ == "__main__":
 		parser.add_argument('-t', '--test-ratio', default=TEST_RATIO, help='the proportion of labeled input kept aside of training for testing', type=float)
 		parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
+		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
 
 		args = vars(parser.parse_args())
 		print('args', args)
@@ -179,19 +225,26 @@ if __name__ == "__main__":
 		N_GPU = min(N_GPU, args['gpu'])
 		TEST_RATIO = args['test_ratio']
 
-		DATA_DIR = "./rawInput/train-jpg"
+		DATA_DIR = "./rawInput/train-jpg-sample"
 		LABEL_FILE = "./rawInput/train.csv"
 		list_imgs = sorted(os.listdir(DATA_DIR))
 		list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
 
 		if args["model"] != '':
 			with open('train/train-idx.csv') as f_train_idx:
-			  train_idx = [int(i) for i in f_train_idx.readline().split(",")]
-			data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
-			cnn = CNN(data)
-			cnn.model.load_weights(args["model"])
+				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
+				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
 		else:
 			data = Dataset(list_imgs, LABEL_FILE)
+
+		if args["cnn"] == "xception":
+			cnn = XceptionCNN(data)
+		else:
+			cnn = CNN(data)
+
+		if args["model"] != '':
+			cnn.model.load_weights(args["model"])
+		else:
 			cnn = CNN(data)
 
 		cnn.fit()
