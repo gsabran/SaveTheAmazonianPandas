@@ -2,8 +2,9 @@ import subprocess
 import time
 import string
 import numpy as np
+import os
 
-from constants import LABELS, WEATHER_IDX
+from constants import LABELS, WEATHER_IDX, DATA_DIR
 
 def get_uniq_name():
 	"""
@@ -25,3 +26,12 @@ def get_predictions(y, threshold=0.5):
 	"""
 	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > threshold]]
 	return (row_pred(row) for row in y)
+
+def get_generated_images(originalImageFileName, ext="jpg"):
+	"""
+	return an array of images generated from an original image.
+	originalImageFileName should not contain extension nor directory path
+	"""
+	for i in range(8):
+		newFileName = "{n}--{i}.{ext}".format(n=originalImageFileName, i=i, ext=ext)
+		yield os.path.join(DATA_DIR, newFileName)

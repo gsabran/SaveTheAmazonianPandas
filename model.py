@@ -17,8 +17,8 @@ from skimage.io import imread, imshow, imsave, show
 import numpy as np
 import random
 
-from constants import LABELS
-from utils import get_uniq_name
+from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
+from utils import get_uniq_name, get_generated_images
 
 
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -192,16 +192,15 @@ class Dataset(object):
 		self.labels_file = labels_file
 		self.labels = self._get_labels()
 		self.test_ratio = TEST_RATIO
-		self.files = list_files
 
 		if training_files is None:
 			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
 			training_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 
-		self.train_set = [f for f in list_files if f in training_files]
-		self.test_set = [f for f in list_files if f not in training_files]
+		self.train_set = [f2 for f in list_files if f in training_files for f2 in get_generated_images(f)]
+		self.test_set = [f2 for f in list_files if f not in training_files for f2 in get_generated_images(f)]
 		with open('train/training-files.csv', 'w') as f:
-			f.write(','.join(self.train_set))
+			f.write(','.join(training_files))
 		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=sessionId))
 
 	def _get_labels(self):
@@ -211,7 +210,10 @@ class Dataset(object):
 			for l in f:
 				filename, rawTags = l.strip().split(',')
 				tags = rawTags.split(' ')
-				labels_dict[filename] = [1 if tag in tags else 0 for tag in LABELS]
+				bool_tags = [1 if tag in tags else 0 for tag in LABELS]
+				for f in get_generated_images(filename):
+					file = f.split('/')[-1].split('.')[0]
+					labels_dict[file] = bool_tags
 		return labels_dict
 
 	def training(self, image_data_fmt):
@@ -249,12 +251,9 @@ if __name__ == "__main__":
 		N_GPU = min(N_GPU, args['gpu'])
 		TEST_RATIO = args['test_ratio']
 
-		DATA_DIR = "./rawInput/train-jpg"
-		LABEL_FILE = "./rawInput/train.csv"
-		list_imgs = sorted(os.listdir(DATA_DIR))
-		list_imgs = [os.path.join(DATA_DIR, f) for f in list_imgs]
+		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
 
-		data = Dataset(list_imgs, LABEL_FILE)
+		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
 			cnn = XceptionCNN(data)
@@ -266,7 +265,7 @@ if __name__ == "__main__":
 			print("Loading model {m}".format(m=args['model']))
 			with open('train/training-files.csv') as f_training_files:
 				training_files = f_training_files.readline().split(",")
-				data = Dataset(list_imgs, LABEL_FILE, training_files=training_files)
+				data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, training_files=training_files)
 			cnn.model = load_model(args['model'])
 
 		cnn.fit()
