@@ -26,27 +26,25 @@ def score(rawPredictions, expectations, threshold):
   return np.mean([F2Score(prediction, expectation) for prediction, expectation in zip(predictions, expectations)])
 
 if __name__ == "__main__":
-  with open('./train/train-idx.csv') as f_train_idx:
-    train_idx = set((int(i) for i in f_train_idx.readline().split(",")))
+  with open('./train/training-files.csv') as f_train_files:
+    train_files = set((int(i) for i in f_train_files.readline().split(",")))
 
   with open('./predict/train-predict-raw.csv') as f_raw_pred:
     f_raw_pred.readline()
     raw_predictions = {}
     for l in f_raw_pred:
       img_name, values = l.split(",")
-      img_idx = int(img_name.replace("train_", ""))
-      if img_idx not in train_idx:
+      if img_name not in train_files:
         values = [float(v) for v in values.split()]
-        raw_predictions[img_idx] = values
+        raw_predictions[img_name] = values
 
   with open("./rawInput/train.csv") as f_train:
     expectations = {}
     f_train.readline()
     for l in f_train:
       img_name, tags = l.split(",")
-      img_idx = int(img_name.replace("train_", ""))
-      if img_idx not in train_idx:
-        expectations[img_idx] = tags.strip().split()
+      if img_name not in train_files:
+        expectations[img_name] = tags.strip().split()
 
   validation_idx = [i for i in expectations]
 

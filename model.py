@@ -188,22 +188,21 @@ class XceptionCNN(ModelCNN):
 
 class Dataset(object):
 
-	def __init__(self, list_files, labels_file, train_idx=None):
+	def __init__(self, list_files, labels_file, training_files=None):
 		self.labels_file = labels_file
 		self.labels = self._get_labels()
 		self.test_ratio = TEST_RATIO
 		self.files = list_files
 
-		if train_idx is None:
-			self.train_idx = random.sample(range(len(self.files)), int(len(self.files) * (1 - self.test_ratio)))
-			with open('train/train-idx.csv', 'w') as f:
-				f.write(','.join([str(i) for i in self.train_idx]))
-		else:
-			self.train_idx = train_idx
+		if training_files is None:
+			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
+			training_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 
-		self.train_set = [f for i, f in enumerate(list_files) if i in self.train_idx]
-		self.test_set = [f for i, f in enumerate(list_files) if i not in self.train_idx]
-		copyfile('train/train-idx.csv', 'train/archive/{f}-train-idx.csv'.format(f=sessionId))
+		self.train_set = [f for f in list_files if f in training_files]
+		self.test_set = [f for f in list_files if f not in training_files]
+		with open('train/training-files.csv', 'w') as f:
+			f.write(','.join(self.train_set))
+		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=sessionId))
 
 	def _get_labels(self):
 		labels_dict = {}
@@ -265,9 +264,9 @@ if __name__ == "__main__":
 
 		if args["model"] != '':
 			print("Loading model {m}".format(m=args['model']))
-			with open('train/train-idx.csv') as f_train_idx:
-				train_idx = [int(i) for i in f_train_idx.readline().split(",")]
-				data = Dataset(list_imgs, LABEL_FILE, train_idx=train_idx)
+			with open('train/training-files.csv') as f_training_files:
+				training_files = f_training_files.readline().split(",")
+				data = Dataset(list_imgs, LABEL_FILE, training_files=training_files)
 			cnn.model = load_model(args['model'])
 
 		cnn.fit()
