@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import argparse
 import os
 import keras
@@ -155,6 +156,7 @@ class XceptionCNN(ModelCNN):
 
 	def fit(self):
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
+		print("Fitting on data of size", x_train.shape, y_train.shape)
 
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
@@ -195,7 +197,7 @@ class Dataset(object):
 
 		if training_files is None:
 			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
-			training_files = [f for i, f in enumerate(list_files) if i not in train_idx]
+			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
 
 		self.train_set = [f2 for f in list_files if f in training_files for f2 in get_generated_images(f)]
 		self.test_set = [f2 for f in list_files if f not in training_files for f2 in get_generated_images(f)]
@@ -219,13 +221,16 @@ class Dataset(object):
 	def training(self, image_data_fmt):
 		labels = []
 		training = []
-		for f in self.train_set:
-			img = imread(f)
-			if image_data_fmt == 'channels_first':
-				img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
-			training.append(img)
-			file = f.split('/')[-1].split('.')[0]
-			labels.append(self.labels[file])
+		print("Reading inputs")
+		with tqdm(total=len(self.train_set)) as pbar:
+			for f in self.train_set:
+				img = imread(f)
+				if image_data_fmt == 'channels_first':
+					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
+				training.append(img)
+				file = f.split('/')[-1].split('.')[0]
+				labels.append(self.labels[file])
+				pbar.update(1)
 
 		return (np.array(training), np.array(labels))
 

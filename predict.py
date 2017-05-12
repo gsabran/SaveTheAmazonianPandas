@@ -11,7 +11,7 @@ from utils import get_uniq_name, get_predictions
 from model import CNN, TRAINED_MODEL, IMG_ROWS, IMG_COLS, CHANNELS, ModelCNN
 
 TEST_DATA_DIR = "./rawInput/test-jpg"
-TRAIN_DATA_DIR = "./rawInput/train-jpg"
+TRAIN_DATA_DIR = "./rawInput/train-jpg-augmented"
 
 if __name__ == "__main__":
 	with K.get_session():
@@ -19,6 +19,7 @@ if __name__ == "__main__":
 		parser.add_argument("-f", "--file", default="", help="file to test on", type=str)
 		parser.add_argument("--data", default="test", help="The set of data to predict on. Either 'test' or 'train'", type=str)
 		parser.add_argument('-m', '--model', default=TRAINED_MODEL, help='The model to load', type=str)
+		parser.add_argument('-b', '--batch-size', default=64, help='The size of the batch', type=int)
 		args = vars(parser.parse_args())
 		print('args', args)
 
@@ -36,8 +37,10 @@ if __name__ == "__main__":
 
 			list_imgs = [f for f in sorted(os.listdir(data_dir)) if (".jpg" in f or ".tif" in f)]
 			imgs = []
-			for f_img in list_imgs:
-				imgs.append(imread(os.path.join(data_dir, f_img)))
+			with tqdm(total=len(list_imgs)) as pbar:
+				for f_img in list_imgs:
+					imgs.append(imread(os.path.join(data_dir, f_img)))
+					pbar.update(1)
 			print("Starting predictions...")
 			with tqdm(total=len(list_imgs)) as pbar:
 				testId = get_uniq_name()
@@ -50,7 +53,7 @@ if __name__ == "__main__":
 					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(LABELS)))
 
 					# larger batch size (relatively to the number of GPU) run out of memory
-					predictions = cnn.model.predict(np.array(imgs), batch_size=64, verbose=1)
+					predictions = cnn.model.predict(np.array(imgs), batch_size=args["batch_size"], verbose=1)
 					for f_img, prediction in zip(list_imgs, predictions):
 						raw_pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join([str(i) for i in prediction])))
 
