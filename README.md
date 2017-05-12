@@ -11,7 +11,7 @@ python ./data-processing/process.py
 # Usage
 
 ## Training
-Create or load a model and the training data, and fit the model. The model is saved after each epoch under `train/checkpoint.hdf5` and the final model is saved under `train/model.h5`. The data used for training is written under `train/train-idx.csv` and remaining labeled inputs can be used for validation.
+Create or load a model and the training data, and fit the model. The model is saved after each epoch under `train/checkpoint.hdf5` and the final model is saved under `train/model.h5`. The data used for training is written under `train/training-files.csv` and remaining labeled inputs can be used for validation.
 
 ```bash
 python3 model.py --epoch 10 --batch-size 16 --test-ratio 0.2 --gpu 8
