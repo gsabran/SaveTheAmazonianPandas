@@ -10,3 +10,5 @@ train-jpg-sample/*
 *.sublime-project
 *.sublime-workspace
 sftp-config.json
+.ipynb_checkpoints/*
+*.out
