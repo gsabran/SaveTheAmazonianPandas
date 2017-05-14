@@ -3,6 +3,7 @@ import argparse
 import os
 import keras
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
+from validation_checkpoint import ValidationCheckpoint
 from keras.models import model_from_json, load_model
 from keras.models import Sequential, Model
 from keras.layers import Input, GlobalAveragePooling2D
@@ -19,8 +20,8 @@ import numpy as np
 import random
 
 from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
-from utils import get_uniq_name, get_generated_images
-
+from utils import get_uniq_name, get_generated_images, get_predictions
+from validate_model import F2Score
 
 directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -109,15 +110,27 @@ class CNN(ModelCNN):
 
 	def fit(self):
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
+		(x_validate, y_validate) = self.data.validation(self.image_data_fmt)
 
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
 
+		def score(model, data_set, expectations):
+			rawPredictions = model.predict(data_set, verbose=1)
+			predictions = get_predictions(np.array(rawPredictions))
+			predictions = np.array([x for x in predictions])
+			return np.mean([F2Score(
+				prediction, 
+				[LABELS[i] for i, x in enumerate(expectation) if x == 1]
+			) for prediction, expectation in zip(predictions, expectations)])
+
+		validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate)
+
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
-			callbacks=[csv_logger, checkpoint, tensorboard],
+			callbacks=[csv_logger, checkpoint, tensorboard, validationCheckpoint],
 			epochs=N_EPOCH
 		)
 
@@ -190,20 +203,24 @@ class XceptionCNN(ModelCNN):
 
 class Dataset(object):
 
-	def __init__(self, list_files, labels_file, training_files=None):
+	def __init__(self, list_files, labels_file, training_files=None, validation_files=None):
 		self.labels_file = labels_file
 		self.labels = self._get_labels()
 		self.test_ratio = TEST_RATIO
 
-		if training_files is None:
+		if training_files is None or validation_files is None:
 			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
 			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
+			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 
 		self.train_set = [f2 for f in list_files if f in training_files for f2 in get_generated_images(f)]
 		self.test_set = [f2 for f in list_files if f not in training_files for f2 in get_generated_images(f)]
 		with open('train/training-files.csv', 'w') as f:
 			f.write(','.join(training_files))
+		with open('train/validation-files.csv', 'w') as f:
+			f.write(','.join(validation_files))
 		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=sessionId))
+		copyfile('train/validation-files.csv', 'train/archive/{f}-validation-files.csv'.format(f=sessionId))
 
 	def _get_labels(self):
 		labels_dict = {}
@@ -218,21 +235,27 @@ class Dataset(object):
 					labels_dict[file] = bool_tags
 		return labels_dict
 
-	def training(self, image_data_fmt):
-		labels = []
-		training = []
+	def __xyData(self, image_data_fmt, isTraining):
+		dataset = self.train_set if isTraining else self.test_set
+		Y = []
+		X = []
 		print("Reading inputs")
-		with tqdm(total=len(self.train_set)) as pbar:
-			for f in self.train_set:
+		with tqdm(total=len(dataset)) as pbar:
+			for f in dataset:
 				img = imread(f)
 				if image_data_fmt == 'channels_first':
 					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
-				training.append(img)
+				X.append(img)
 				file = f.split('/')[-1].split('.')[0]
-				labels.append(self.labels[file])
+				Y.append(self.labels[file])
 				pbar.update(1)
+		return (np.array(X), np.array(Y))
 
-		return (np.array(training), np.array(labels))
+	def training(self, image_data_fmt):
+		return self.__xyData(image_data_fmt, True)
+
+	def validation(self, image_data_fmt):
+		return self.__xyData(image_data_fmt, False)
 
 	def testing(self):
 		pass
@@ -247,6 +270,7 @@ if __name__ == "__main__":
 		parser.add_argument('-g', '--gpu', default=N_GPU, help='the number of gpu to use', type=int)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
 		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
+		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
 
 		args = vars(parser.parse_args())
 		print('args', args)
@@ -257,6 +281,7 @@ if __name__ == "__main__":
 		TEST_RATIO = args['test_ratio']
 
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
+		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
 
 		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE)
 		if args["cnn"] == "xception":
