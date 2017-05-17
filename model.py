@@ -180,7 +180,7 @@ class XceptionCNN(ModelCNN):
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
 		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
 
-		validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate, patience=2)
+		validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate, patience=5)
 
 		print("Fitting top dense layers")
 		self.model.fit(x_train, y_train,
