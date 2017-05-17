@@ -1,23 +1,22 @@
-from tqdm import tqdm
-import argparse
 import os
+from shutil import copyfile
+import argparse
+import random
+
+from tqdm import tqdm
 import keras
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 from validation_checkpoint import ValidationCheckpoint
-from keras.models import model_from_json, load_model
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras.layers import Input, GlobalAveragePooling2D
-from keras.layers.core import Dense, Dropout, Activation, Flatten, Lambda
+from keras.layers.core import Dense, Dropout, Flatten, Lambda
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.merge import Concatenate
-from keras.optimizers import SGD , Adam
 from keras import backend as K
 from keras.applications.xception import Xception
 import tensorflow as tf
-from shutil import copyfile
-from skimage.io import imread, imshow, imsave, show
+from skimage.io import imread
 import numpy as np
-import random
 
 from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
 from utils import get_uniq_name, get_generated_images, get_predictions
@@ -77,6 +76,19 @@ def to_multi_gpu(model, n_gpus=N_GPU):
 
 	return Model(inputs=[x], outputs=[merged])
 
+
+def score(model, data_set, expectations):
+	"""
+	score how well the model is doing on a given data set with known output
+	"""
+	raw_predictions = model.predict(data_set, verbose=1)
+	predictions = get_predictions(np.array(raw_predictions))
+	predictions = np.array([x for x in predictions])
+	return np.mean([F2Score(
+		prediction, 
+		[LABELS[i] for i, x in enumerate(expectation) if x == 1]
+	) for prediction, expectation in zip(predictions, expectations)])
+
 class CNN(ModelCNN):
 
 	def __init__(self, dataset, gpus=True):
@@ -115,15 +127,6 @@ class CNN(ModelCNN):
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
-
-		def score(model, data_set, expectations):
-			rawPredictions = model.predict(data_set, verbose=1)
-			predictions = get_predictions(np.array(rawPredictions))
-			predictions = np.array([x for x in predictions])
-			return np.mean([F2Score(
-				prediction, 
-				[LABELS[i] for i, x in enumerate(expectation) if x == 1]
-			) for prediction, expectation in zip(predictions, expectations)])
 
 		validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate)
 
@@ -169,12 +172,16 @@ class XceptionCNN(ModelCNN):
 
 	def fit(self):
 		(x_train, y_train) = self.data.training(self.image_data_fmt)
+		(x_validate, y_validate) = self.data.validation(self.image_data_fmt)
 		print("Fitting on data of size", x_train.shape, y_train.shape)
 
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
 		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
+
+		validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate, patience=5)
+
 		print("Fitting top dense layers")
 		self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
@@ -197,7 +204,7 @@ class XceptionCNN(ModelCNN):
 		return self.model.fit(x_train, y_train,
 			batch_size=BATCH_SIZE,
 			verbose=1,
-			callbacks=[csv_logger, checkpoint, tensorboard],
+			callbacks=[csv_logger, checkpoint, tensorboard, validationCheckpoint],
 			epochs=N_EPOCH
 		)
 
