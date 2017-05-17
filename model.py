@@ -256,7 +256,7 @@ class Dataset(object):
 	def batch_generator(self, n, image_data_fmt):
 		files, cdf = self.files_and_cdf
 		data = self.__xyData(image_data_fmt, True)
-		dataset = self.train_set if isTraining else self.test_set
+		dataset = self.train_set
 		data_dict = {}
 		for i, f in enumerate(dataset):
 			data_dict[f] = (data[0][i], data[1][i])
@@ -293,7 +293,7 @@ class Dataset(object):
 		print("Reading inputs")
 		with tqdm(total=len(dataset)) as pbar:
 			for f in dataset:
-				img = imread(f)
+				img = imread(os.path.join(ORIGINAL_DATA_DIR, "{}.jpg".format(f)))
 				if image_data_fmt == 'channels_first':
 					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
 				X.append(img)
@@ -349,7 +349,7 @@ if __name__ == "__main__":
 				data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, training_files=training_files)
 			cnn.model = load_model(args['model'])
 
-		cnn.fit()
+		cnn.fit_generator()
 		cnn.model.save(TRAINED_MODEL, overwrite=True)
 		copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
 		print('Done running')

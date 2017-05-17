@@ -62,7 +62,7 @@ def files_proba(file_labels, labels):
 
 def files_and_cdf_from_proba(proba):
 	files_probs = sorted(proba.items(), key=lambda i: i[1])
-	return map(lambda i: i[0], files_probs), np.cumsum(map(lambda i: i[1], files_probs))
+	return list(map(lambda i: i[0], files_probs)), np.cumsum(list(map(lambda i: i[1], files_probs)))
 
 def pick(n, files, cdf):
-	return [files[bisect(cdf, random())] for i in xrange(n)]
+	return [files[bisect(cdf, random())] for i in range(n)]
