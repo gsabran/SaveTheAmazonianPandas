@@ -208,7 +208,7 @@ class XceptionCNN(ModelCNN):
 		print("Fitting top dense layers")
 		self.model.fit_generator(
 			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
-			len(self.data.train_set),
+			int(len(self.data.train_set) / BATCH_SIZE),
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=5
@@ -227,7 +227,7 @@ class XceptionCNN(ModelCNN):
 		print("Fitting lower conv layers")
 		return self.model.fit_generator(
 			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
-			len(self.data.train_set),
+			int(len(self.data.train_set) / BATCH_SIZE),
 			verbose=1,
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=N_EPOCH
