@@ -20,7 +20,7 @@ import numpy as np
 import random
 
 from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
-from utils import get_uniq_name, get_generated_images, get_predictions
+from utils import get_uniq_name, get_generated_images, get_predictions, files_proba, files_and_cdf_from_proba, pick
 from validate_model import F2Score
 
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -121,7 +121,7 @@ class CNN(ModelCNN):
 			predictions = get_predictions(np.array(rawPredictions))
 			predictions = np.array([x for x in predictions])
 			return np.mean([F2Score(
-				prediction, 
+				prediction,
 				[LABELS[i] for i, x in enumerate(expectation) if x == 1]
 			) for prediction, expectation in zip(predictions, expectations)])
 
@@ -200,6 +200,38 @@ class XceptionCNN(ModelCNN):
 			callbacks=[csv_logger, checkpoint, tensorboard],
 			epochs=N_EPOCH
 		)
+	def fit_generator(self):
+		csv_logger = CSVLogger('train/training.log')
+		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
+		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
+		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
+		print("Fitting top dense layers")
+		self.model.fit_generator(
+			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
+			len(self.data.train_set),
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=5
+		)
+
+		for layer in self.model.layers[:54]:
+			layer.trainable = False
+		for layer in self.model.layers[54:]:
+			layer.trainable = True
+
+		if self.gpus:
+			self.model = to_multi_gpu(self.model)
+
+		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
+		print("Fitting lower conv layers")
+		return self.model.fit_generator(
+			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
+			len(self.data.train_set),
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=N_EPOCH
+		)
 
 class Dataset(object):
 
@@ -210,15 +242,35 @@ class Dataset(object):
 
 		if training_files is None or validation_files is None:
 			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
-			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
-			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
+			self.training_files = [f for i, f in enumerate(list_files) if i in train_idx]
+			self.validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 
-		self.train_set = [f2 for f in list_files if f in training_files for f2 in get_generated_images(f)]
-		self.test_set = [f2 for f in list_files if f not in training_files for f2 in get_generated_images(f)]
+		self.train_set = self.training_files
+		self.test_set = self.validation_files
+
+		self.proba = files_proba({f: labels for f, labels in self.labels.items() if f in self.train_set}, LABELS)
+		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
+
+		self.write_sets()
+
+	def batch_generator(self, n, image_data_fmt):
+		files, cdf = self.files_and_cdf
+		data = self.__xyData(image_data_fmt, True)
+		dataset = self.train_set if isTraining else self.test_set
+		data_dict = {}
+		for i, f in enumerate(dataset):
+			data_dict[f] = (data[0][i], data[1][i])
+		while True:
+			batch_files = pick(n, files, cdf)
+			inputs = np.array([data_dict[f][0] for f in batch_files])
+			targets = np.array([data_dict[f][1] for f in batch_files])
+			yield (inputs, targets)
+
+	def write_sets(self):
 		with open('train/training-files.csv', 'w') as f:
-			f.write(','.join(training_files))
+			f.write(','.join(self.training_files))
 		with open('train/validation-files.csv', 'w') as f:
-			f.write(','.join(validation_files))
+			f.write(','.join(self.validation_files))
 		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=sessionId))
 		copyfile('train/validation-files.csv', 'train/archive/{f}-validation-files.csv'.format(f=sessionId))
 
@@ -230,9 +282,8 @@ class Dataset(object):
 				filename, rawTags = l.strip().split(',')
 				tags = rawTags.split(' ')
 				bool_tags = [1 if tag in tags else 0 for tag in LABELS]
-				for f in get_generated_images(filename):
-					file = f.split('/')[-1].split('.')[0]
-					labels_dict[file] = bool_tags
+				file = filename.split('/')[-1].split('.')[0]
+				labels_dict[file] = bool_tags
 		return labels_dict
 
 	def __xyData(self, image_data_fmt, isTraining):

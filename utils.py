@@ -1,9 +1,13 @@
+from __future__ import division
 import subprocess
 import time
 import string
 import numpy as np
 import os
+import math
 
+from bisect import bisect
+from random import random
 from constants import LABELS, WEATHER_IDX, DATA_DIR
 
 def get_uniq_name():
@@ -35,3 +39,30 @@ def get_generated_images(originalImageFileName, ext="jpg"):
 	for i in range(8):
 		newFileName = "{n}--{i}.{ext}".format(n=originalImageFileName, i=i, ext=ext)
 		yield os.path.join(DATA_DIR, newFileName)
+
+def files_proba(file_labels, labels):
+	# file_labels is a dict of (img -> binary vector of labels)
+	train_tags = file_labels
+
+	count_labels = np.array([0] * len(labels))
+	for img in train_tags:
+		count_labels += train_tags[img]
+	n_doc = len(train_tags)
+	# idf is a vector representing the idf of each tag
+	idf = np.array([math.log(n_doc / (1 + count_labels[i])) for i, _ in enumerate(labels)])
+
+	tf_idf = {}
+	for img in train_tags:
+		# We use train_tags[img] as a mask over the idf of each tag and sum
+		tf_idf[img] = (np.array(train_tags[img]) * idf).sum()
+
+	sum_tf = sum(tf_idf.values())
+	proba = {img: tf_idf[img] / sum_tf for img in tf_idf}
+	return proba
+
+def files_and_cdf_from_proba(proba):
+	files_probs = sorted(proba.items(), key=lambda i: i[1])
+	return map(lambda i: i[0], files_probs), np.cumsum(map(lambda i: i[1], files_probs))
+
+def pick(n, files, cdf):
+	return [files[bisect(cdf, random())] for i in xrange(n)]
