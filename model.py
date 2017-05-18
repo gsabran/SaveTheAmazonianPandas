@@ -148,10 +148,10 @@ class XceptionCNN(ModelCNN):
 		# add a global spatial average pooling layer
 		x = base_model.output
 		x = GlobalAveragePooling2D()(x)
-		x = Dropout(0.25)(x)
+		x = Dropout(0.5)(x)
 		# let's add a fully-connected layer
 		x = Dense(1024, activation='relu')(x)
-		x = Dropout(0.5)(x)
+		x = Dropout(0.75)(x)
 		# and a logistic layer -- let's say we have 200 classes
 		predictions = Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid')(x)
 
