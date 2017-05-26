@@ -65,5 +65,4 @@ def files_and_cdf_from_proba(proba):
 	return list(map(lambda i: i[0], files_probs)), np.cumsum(list(map(lambda i: i[1], files_probs)))
 
 def pick(n, files, cdf):
-	# Does bisect needs sorted array?
 	return [files[bisect(cdf, random())] for i in range(n)]
