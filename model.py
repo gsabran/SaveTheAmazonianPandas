@@ -13,6 +13,7 @@ from keras.layers.merge import Concatenate
 from keras.optimizers import SGD , Adam
 from keras import backend as K
 from keras.applications.xception import Xception
+from keras.preprocessing.image import ImageDataGenerator
 import tensorflow as tf
 from shutil import copyfile
 from skimage.io import imread, imshow, imsave, show
@@ -20,7 +21,7 @@ import numpy as np
 import random
 
 from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
-from utils import get_uniq_name, get_generated_images, get_predictions, files_proba, files_and_cdf_from_proba, pick
+from utils import get_uniq_name, get_predictions, files_proba, files_and_cdf_from_proba, pick
 from validate_model import F2Score
 
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -161,7 +162,7 @@ class XceptionCNN(ModelCNN):
 		# first: train only the top layers (which were randomly initialized)
 		# i.e. freeze all convolutional InceptionV3 layers
 		for layer in base_model.layers:
-		    layer.trainable = False
+			layer.trainable = False
 		# compile the model (should be done *after* setting layers to non-trainable)
 		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
 
@@ -252,6 +253,25 @@ class Dataset(object):
 		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
 
 		self.write_sets()
+		self.image_data_generator = ImageDataGenerator(
+			# featurewise_center=False,
+		#   samplewise_center=False,
+		#   featurewise_std_normalization=False,
+		#   samplewise_std_normalization=False,
+		#   zca_whitening=False,
+			rotation_range=180,
+			# width_shift_range=0.,
+			# height_shift_range=0.,
+			# shear_range=0.,
+			# zoom_range=0.,
+			# channel_shift_range=0.,
+			fill_mode='reflect',
+			# cval=0.,
+			horizontal_flip=True,
+			vertical_flip=True,
+			# rescale=None,
+			# preprocessing_function=None
+		)
 
 	def batch_generator(self, n, image_data_fmt):
 		files, cdf = self.files_and_cdf
@@ -262,9 +282,15 @@ class Dataset(object):
 			data_dict[f] = (data[0][i], data[1][i])
 		while True:
 			batch_files = pick(n, files, cdf)
+			outputs = np.array([data_dict[f][1] for f in batch_files])
 			inputs = np.array([data_dict[f][0] for f in batch_files])
-			targets = np.array([data_dict[f][1] for f in batch_files])
-			yield (inputs, targets)
+
+			batch_x = np.zeros(tuple([n] + list(inputs.shape)[1:]), dtype=K.floatx())
+			for i, inp in enumerate(inputs):
+				x = self.image_data_generator.random_transform(inp.astype(K.floatx()))
+				x = self.image_data_generator.standardize(x)
+				batch_x[i] = x
+			yield (batch_x, outputs)
 
 	def write_sets(self):
 		with open('train/training-files.csv', 'w') as f:
