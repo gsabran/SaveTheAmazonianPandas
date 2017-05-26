@@ -5,3 +5,9 @@ ORIGINAL_DATA_DIR = "./rawInput/train-jpg"
 DATA_DIR = "./rawInput/train-jpg-augmented"
 ORIGINAL_LABEL_FILE = "./rawInput/train.csv"
 LABEL_FILE = "./rawInput/train-augmented.csv"
+
+IMG_ROWS = 256
+IMG_COLS = 256
+CHANNELS = 3
+NUM_TAGS = 13
+NUM_WEATHER = 4
