@@ -14,12 +14,13 @@ from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.merge import Concatenate
 from keras import backend as K
 from keras.applications.xception import Xception
+from keras.preprocessing.image import ImageDataGenerator
 import tensorflow as tf
 from skimage.io import imread
 import numpy as np
 
 from constants import LABELS, ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE
-from utils import get_uniq_name, get_generated_images, get_predictions
+from utils import get_uniq_name, get_predictions, files_proba, files_and_cdf_from_proba, pick
 from validate_model import F2Score
 
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -151,10 +152,10 @@ class XceptionCNN(ModelCNN):
 		# add a global spatial average pooling layer
 		x = base_model.output
 		x = GlobalAveragePooling2D()(x)
-		x = Dropout(0.25)(x)
+		x = Dropout(0.5)(x)
 		# let's add a fully-connected layer
 		x = Dense(1024, activation='relu')(x)
-		x = Dropout(0.5)(x)
+		x = Dropout(0.75)(x)
 		# and a logistic layer -- let's say we have 200 classes
 		predictions = Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid')(x)
 
@@ -164,7 +165,7 @@ class XceptionCNN(ModelCNN):
 		# first: train only the top layers (which were randomly initialized)
 		# i.e. freeze all convolutional InceptionV3 layers
 		for layer in base_model.layers:
-		    layer.trainable = False
+			layer.trainable = False
 		# compile the model (should be done *after* setting layers to non-trainable)
 		model.compile(optimizer='rmsprop', loss='binary_crossentropy')
 
@@ -207,6 +208,38 @@ class XceptionCNN(ModelCNN):
 			callbacks=[csv_logger, checkpoint, tensorboard, validationCheckpoint],
 			epochs=N_EPOCH
 		)
+	def fit_generator(self):
+		csv_logger = CSVLogger('train/training.log')
+		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
+		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
+		# This fit is in 2 steps, first we fit the top layers we added, then we fit some top conv layers too
+		print("Fitting top dense layers")
+		self.model.fit_generator(
+			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
+			int(len(self.data.train_set) / BATCH_SIZE),
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=5
+		)
+
+		for layer in self.model.layers[:54]:
+			layer.trainable = False
+		for layer in self.model.layers[54:]:
+			layer.trainable = True
+
+		if self.gpus:
+			self.model = to_multi_gpu(self.model)
+
+		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
+		print("Fitting lower conv layers")
+		return self.model.fit_generator(
+			self.data.batch_generator(BATCH_SIZE, self.image_data_fmt),
+			int(len(self.data.train_set) / BATCH_SIZE),
+			verbose=1,
+			callbacks=[csv_logger, checkpoint, tensorboard],
+			epochs=N_EPOCH
+		)
 
 class Dataset(object):
 
@@ -217,15 +250,60 @@ class Dataset(object):
 
 		if training_files is None or validation_files is None:
 			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.test_ratio)))
-			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
-			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
+			self.training_files = [f for i, f in enumerate(list_files) if i in train_idx]
+			self.validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 
-		self.train_set = [f2 for f in list_files if f in training_files for f2 in get_generated_images(f)]
-		self.test_set = [f2 for f in list_files if f not in training_files for f2 in get_generated_images(f)]
+		self.train_set = self.training_files
+		self.test_set = self.validation_files
+
+		self.proba = files_proba({f: labels for f, labels in self.labels.items() if f in self.train_set}, LABELS)
+		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
+
+		self.write_sets()
+		self.image_data_generator = ImageDataGenerator(
+			# featurewise_center=False,
+		#   samplewise_center=False,
+		#   featurewise_std_normalization=False,
+		#   samplewise_std_normalization=False,
+		#   zca_whitening=False,
+			rotation_range=180,
+			# width_shift_range=0.,
+			# height_shift_range=0.,
+			# shear_range=0.,
+			# zoom_range=0.,
+			# channel_shift_range=0.,
+			fill_mode='reflect',
+			# cval=0.,
+			horizontal_flip=True,
+			vertical_flip=True,
+			# rescale=None,
+			# preprocessing_function=None
+		)
+
+	def batch_generator(self, n, image_data_fmt):
+		files, cdf = self.files_and_cdf
+		data = self.__xyData(image_data_fmt, True)
+		dataset = self.train_set
+		data_dict = {}
+		for i, f in enumerate(dataset):
+			data_dict[f] = (data[0][i], data[1][i])
+		while True:
+			batch_files = pick(n, files, cdf)
+			outputs = np.array([data_dict[f][1] for f in batch_files])
+			inputs = np.array([data_dict[f][0] for f in batch_files])
+
+			batch_x = np.zeros(tuple([n] + list(inputs.shape)[1:]), dtype=K.floatx())
+			for i, inp in enumerate(inputs):
+				x = self.image_data_generator.random_transform(inp.astype(K.floatx()))
+				x = self.image_data_generator.standardize(x)
+				batch_x[i] = x
+			yield (batch_x, outputs)
+
+	def write_sets(self):
 		with open('train/training-files.csv', 'w') as f:
-			f.write(','.join(training_files))
+			f.write(','.join(self.training_files))
 		with open('train/validation-files.csv', 'w') as f:
-			f.write(','.join(validation_files))
+			f.write(','.join(self.validation_files))
 		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=sessionId))
 		copyfile('train/validation-files.csv', 'train/archive/{f}-validation-files.csv'.format(f=sessionId))
 
@@ -237,9 +315,8 @@ class Dataset(object):
 				filename, rawTags = l.strip().split(',')
 				tags = rawTags.split(' ')
 				bool_tags = [1 if tag in tags else 0 for tag in LABELS]
-				for f in get_generated_images(filename):
-					file = f.split('/')[-1].split('.')[0]
-					labels_dict[file] = bool_tags
+				file = filename.split('/')[-1].split('.')[0]
+				labels_dict[file] = bool_tags
 		return labels_dict
 
 	def __xyData(self, image_data_fmt, isTraining):
@@ -249,7 +326,7 @@ class Dataset(object):
 		print("Reading inputs")
 		with tqdm(total=len(dataset)) as pbar:
 			for f in dataset:
-				img = imread(f)
+				img = imread(os.path.join(ORIGINAL_DATA_DIR, "{}.jpg".format(f)))
 				if image_data_fmt == 'channels_first':
 					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
 				X.append(img)
@@ -305,7 +382,7 @@ if __name__ == "__main__":
 				data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, training_files=training_files)
 			cnn.model = load_model(args['model'])
 
-		cnn.fit()
+		cnn.fit_generator()
 		cnn.model.save(TRAINED_MODEL, overwrite=True)
 		copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
 		print('Done running')
