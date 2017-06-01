@@ -61,7 +61,7 @@ class Dataset(object):
 			# preprocessing_function=None
 		)
 
-	def batch_generator(self, n, image_data_fmt):
+	def batch_generator(self, n, image_data_fmt, balancing=True):
 		"""
 		Generate batches fo size n, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
@@ -72,7 +72,10 @@ class Dataset(object):
 		for i, f in enumerate(self.training_files):
 			data_dict[f] = (data[0][i], data[1][i])
 		while True:
-			batch_files = pick(n, files, cdf)
+			if balancing:
+				batch_files = pick(n, files, cdf)
+			else:
+				batch_files = random.sample(files, n)
 			outputs = np.array([data_dict[f][1] for f in batch_files])
 			inputs = np.array([data_dict[f][0] for f in batch_files])
 
