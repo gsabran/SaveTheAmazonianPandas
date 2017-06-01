@@ -49,7 +49,9 @@ def files_proba(file_labels, labels):
 		count_labels += train_tags[img]
 	n_doc = len(train_tags)
 	# idf is a vector representing the idf of each tag
-	idf = np.array([math.log(n_doc / (1 + count_labels[i])) for i, _ in enumerate(labels)])
+	# We've modified this idf by removing the log here, which leads
+	# to more balanced sampling
+	idf = np.array([n_doc / (1 + count_labels[i]) for i, _ in enumerate(labels)])
 
 	tf_idf = {}
 	for img in train_tags:
