@@ -18,14 +18,9 @@ class Model(object):
 		data: the dataset to use
 		multi_gpu: wether the model should use several GPUs or not
 		"""
-<<<<<<< HEAD
 		channels = CHANNELS
 		if tiff_model:
 			channels += 1
-=======
-		if tiff_model:
-			CHANNELS += 1
->>>>>>> origin/tiff-files
 
 		self.data = data
 		self.multi_gpu = multi_gpu
