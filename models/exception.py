@@ -18,8 +18,8 @@ class XceptionCNN(Model):
 		x = GlobalAveragePooling2D()(x)
 		x = Dropout(0.5)(x)
 		# let's add a fully-connected layer
-		x = Dense(1024, activation='relu')(x)
-		x = Dropout(0.75)(x)
+		x = Dense(85, activation='relu')(x)
+		x = Dropout(0.5)(x)
 		# and a logistic layer -- let's say we have 200 classes
 		predictions = Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid')(x)
 
