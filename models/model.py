@@ -24,9 +24,9 @@ class Model(object):
 
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
-			self.input_shape = (CHANNELS, IMG_ROWS, IMG_COLS)
+			self.input_shape = (channels, IMG_ROWS / 2, IMG_COLS / 2)
 		else:
-			self.input_shape = (IMG_ROWS, IMG_COLS, CHANNELS)
+			self.input_shape = (IMG_ROWS / 2, IMG_COLS / 2, channels)
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
@@ -59,7 +59,7 @@ class Model(object):
 		Fit the model
 		n_epoch: the max number of epoch to run
 		batch_size: the size of each training batch
-		validating: wether validation should occur after each batch, 
+		validating: wether validation should occur after each batch,
 			if so training will terinate as soon as validation stop increasing
 		generating: wether the data should be generated on the fly
 		"""
@@ -73,7 +73,7 @@ class Model(object):
 
 		if validating:
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt)
-			
+
 			def score(model, data_set, expectations):
 				rawPredictions = model.predict(data_set, verbose=1)
 				predictions = get_predictions(np.array(rawPredictions))

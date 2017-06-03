@@ -57,7 +57,7 @@ class Dataset(object):
 			# cval=0.,
 			horizontal_flip=True,
 			vertical_flip=True,
-			# rescale=None,
+			rescale=0.5,
 			# preprocessing_function=None
 		)
 
