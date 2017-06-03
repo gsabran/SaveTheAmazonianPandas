@@ -28,6 +28,7 @@ if __name__ == "__main__":
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
 		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
+		parser.add_argument('--tiff', action='store_true')
 
 		args = vars(parser.parse_args())
 		print('args', args)
@@ -37,16 +38,19 @@ if __name__ == "__main__":
 		BATCH_SIZE = args['batch_size'] * N_GPU
 		VALIDATION_RATIO = args['validation_ratio']
 
+		if args['tiff']:
+			ORIGINAL_DATA_DIR =  "./rawInput/train-tiff"
+
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
 		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
 
 		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, VALIDATION_RATIO, sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
-			cnn = XceptionCNN(data)
+			cnn = XceptionCNN(data, tiff_model=args['tiff'])
 		else:
 			print("Using simple model architecture")
-			cnn = SimpleCNN(data)
+			cnn = SimpleCNN(data, tiff_model=args['tiff'])
 
 		if args["model"] != '':
 			print("Loading model {m}".format(m=args['model']))
