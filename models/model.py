@@ -24,9 +24,9 @@ class Model(object):
 
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
-			self.input_shape = (channels, IMG_ROWS / 2, IMG_COLS / 2)
+			self.input_shape = (CHANNELS, IMG_ROWS / 2, IMG_COLS / 2)
 		else:
-			self.input_shape = (IMG_ROWS / 2, IMG_COLS / 2, channels)
+			self.input_shape = (IMG_ROWS / 2, IMG_COLS / 2, CHANNELS)
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
