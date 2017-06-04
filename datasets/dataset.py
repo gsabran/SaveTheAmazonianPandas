@@ -71,7 +71,7 @@ class Dataset(object):
 		data = self.trainingSet(image_data_fmt)
 		data_dict = {}
 		for i, f in enumerate(self.training_files):
-			if input_size:
+			if input_shape:
 				data_dict[f] = (imresize(data[0][i], input_shape), data[1][i])
 			else:
 				data_dict[f] = (data[0][i], data[1][i])
