@@ -72,7 +72,7 @@ class Model(object):
 		callbacks = [csv_logger, checkpoint, tensorboard]
 
 		if validating:
-			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt)
+			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(model, data_set, expectations):
 				rawPredictions = model.predict(data_set, verbose=1)
@@ -88,14 +88,14 @@ class Model(object):
 
 		if generating:
 			return self.model.fit_generator(
-				self.data.batch_generator(batch_size, self.image_data_fmt, input_shape=self.input_shape),
+				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape),
 				int(len(self.data.training_files) / batch_size),
 				verbose=1,
 				callbacks=callbacks,
 				epochs=n_epoch
 			)
 		else:
-			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt)
+			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			return self.model.fit(x_train, y_train,
 				batch_size=batch_size,
 				verbose=1,
