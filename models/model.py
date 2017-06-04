@@ -63,8 +63,8 @@ class Model(object):
 			if so training will terinate as soon as validation stop increasing
 		generating: wether the data should be generated on the fly
 		"""
-		(x_train, y_train) = self.data.trainingSet(self.image_data_fmt)
-		print("Fitting on data of size", x_train.shape, y_train.shape)
+
+		print("Fitting on data of size", self.input_shape)
 
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
@@ -95,6 +95,7 @@ class Model(object):
 				epochs=n_epoch
 			)
 		else:
+			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt)
 			return self.model.fit(x_train, y_train,
 				batch_size=batch_size,
 				verbose=1,
