@@ -5,6 +5,7 @@ from tqdm import tqdm
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
 from skimage.io import imread
+from scipy.misc import imresize
 import numpy as np
 
 from constants import LABELS, ORIGINAL_DATA_DIR, CHANNELS, IMG_ROWS, IMG_COLS
@@ -57,11 +58,11 @@ class Dataset(object):
 			# cval=0.,
 			horizontal_flip=True,
 			vertical_flip=True,
-			rescale=0.5,
+			# rescale=None,
 			# preprocessing_function=None
 		)
 
-	def batch_generator(self, n, image_data_fmt, balancing=True):
+	def batch_generator(self, n, image_data_fmt, balancing=True, input_shape=None):
 		"""
 		Generate batches fo size n, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
@@ -70,7 +71,10 @@ class Dataset(object):
 		data = self.trainingSet(image_data_fmt)
 		data_dict = {}
 		for i, f in enumerate(self.training_files):
-			data_dict[f] = (data[0][i], data[1][i])
+			if input_size:
+				data_dict[f] = (imresize(data[0][i], input_shape), data[1][i])
+			else:
+				data_dict[f] = (data[0][i], data[1][i])
 		while True:
 			if balancing:
 				batch_files = pick(n, files, cdf)

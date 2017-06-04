@@ -4,7 +4,7 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
-from constants import CHANNELS, IMG_ROWS, IMG_COLS, LABELS
+from constants import CHANNELS, IMG_ROWS, IMG_COLS, LABELS, IMG_SCALE
 from validate_model import F2Score
 from validation_checkpoint import ValidationCheckpoint
 from utils import get_predictions
@@ -24,9 +24,9 @@ class Model(object):
 
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
-			self.input_shape = (CHANNELS, IMG_ROWS / 2, IMG_COLS / 2)
+			self.input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 		else:
-			self.input_shape = (IMG_ROWS / 2, IMG_COLS / 2, CHANNELS)
+			self.input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
@@ -88,7 +88,7 @@ class Model(object):
 
 		if generating:
 			return self.model.fit_generator(
-				self.data.batch_generator(batch_size, self.image_data_fmt),
+				self.data.batch_generator(batch_size, self.image_data_fmt, input_shape=self.input_shape),
 				int(len(self.data.training_files) / batch_size),
 				verbose=1,
 				callbacks=callbacks,
