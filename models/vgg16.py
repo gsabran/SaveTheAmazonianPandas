@@ -41,10 +41,10 @@ class VGG16CNN(Model):
 		pass # paralelization done during fitting
 
 	def compile(self):
-		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy', decay=0.8)
 
 	def compile_sgd(self):
-		self.model.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='binary_crossentropy')
+		self.model.compile(optimizer=SGD(lr=0.0001, momentum=0.9, decay=0.8), loss='binary_crossentropy')
 
 	def fit(self, n_epoch, batch_size, validating=True, generating=False):
 		print("Fitting top dense layers")
