@@ -46,7 +46,7 @@ class VGG16CNN(Model):
 		print("Fitting top dense layers")
 		super(VGG16CNN, self).fit(5, batch_size, validating=False, generating=generating)
 
-		for layer in self.model
+		for layer in self.model.layers
 			layer.trainable = True
 
 		if self.multi_gpu:
