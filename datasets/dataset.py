@@ -5,6 +5,7 @@ from tqdm import tqdm
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
 from skimage.io import imread
+from scipy.misc import imresize
 import numpy as np
 
 from constants import LABELS, ORIGINAL_DATA_DIR, CHANNELS, IMG_ROWS, IMG_COLS
@@ -61,16 +62,19 @@ class Dataset(object):
 			# preprocessing_function=None
 		)
 
-	def batch_generator(self, n, image_data_fmt, balancing=True):
+	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True):
 		"""
 		Generate batches fo size n, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
 		"""
 		files, cdf = self.files_and_cdf
-		data = self.trainingSet(image_data_fmt)
+		data = self.trainingSet(image_data_fmt, input_shape)
 		data_dict = {}
 		for i, f in enumerate(self.training_files):
-			data_dict[f] = (data[0][i], data[1][i])
+			if input_shape:
+				data_dict[f] = (imresize(data[0][i], input_shape), data[1][i])
+			else:
+				data_dict[f] = (data[0][i], data[1][i])
 		while True:
 			if balancing:
 				batch_files = pick(n, files, cdf)
@@ -106,7 +110,7 @@ class Dataset(object):
 				labels_dict[file] = bool_tags
 		return labels_dict
 
-	def __xyData(self, image_data_fmt, isTraining):
+	def __xyData(self, image_data_fmt, isTraining, input_shape):
 		dataset = self.training_files if isTraining else self.validation_files
 		Y = []
 		X = []
@@ -116,20 +120,20 @@ class Dataset(object):
 				img = imread(os.path.join(ORIGINAL_DATA_DIR, "{}.jpg".format(f)))
 				if image_data_fmt == 'channels_first':
 					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
-				X.append(img)
+				X.append(imresize(img, input_shape))
 				file = f.split('/')[-1].split('.')[0]
 				Y.append(self.outputs[file])
 				pbar.update(1)
 		return (np.array(X), np.array(Y))
 
-	def trainingSet(self, image_data_fmt):
+	def trainingSet(self, image_data_fmt, input_shape):
 		"""
 		The training set for a Keras model
 		"""
-		return self.__xyData(image_data_fmt, True)
+		return self.__xyData(image_data_fmt, True, input_shape)
 
-	def validationSet(self, image_data_fmt):
+	def validationSet(self, image_data_fmt, input_shape):
 		"""
 		The validation set for a Keras model
 		"""
-		return self.__xyData(image_data_fmt, False)
+		return self.__xyData(image_data_fmt, False, input_shape)

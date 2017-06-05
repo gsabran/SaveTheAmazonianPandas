@@ -4,7 +4,7 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
-from constants import CHANNELS, IMG_ROWS, IMG_COLS, LABELS
+from constants import CHANNELS, IMG_ROWS, IMG_COLS, LABELS, IMG_SCALE
 from validate_model import F2Score
 from validation_checkpoint import ValidationCheckpoint
 from utils import get_predictions
@@ -24,9 +24,9 @@ class Model(object):
 
 		self.image_data_fmt = K.image_data_format()
 		if self.image_data_fmt == 'channels_first':
-			self.input_shape = (CHANNELS, IMG_ROWS, IMG_COLS)
+			self.input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 		else:
-			self.input_shape = (IMG_ROWS, IMG_COLS, CHANNELS)
+			self.input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
@@ -59,12 +59,12 @@ class Model(object):
 		Fit the model
 		n_epoch: the max number of epoch to run
 		batch_size: the size of each training batch
-		validating: wether validation should occur after each batch, 
+		validating: wether validation should occur after each batch,
 			if so training will terinate as soon as validation stop increasing
 		generating: wether the data should be generated on the fly
 		"""
-		(x_train, y_train) = self.data.trainingSet(self.image_data_fmt)
-		print("Fitting on data of size", x_train.shape, y_train.shape)
+
+		print("Fitting on data of size", self.input_shape)
 
 		csv_logger = CSVLogger('train/training.log')
 		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
@@ -72,8 +72,8 @@ class Model(object):
 		callbacks = [csv_logger, checkpoint, tensorboard]
 
 		if validating:
-			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt)
-			
+			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
+
 			def score(model, data_set, expectations):
 				rawPredictions = model.predict(data_set, verbose=1)
 				predictions = get_predictions(np.array(rawPredictions))
@@ -88,13 +88,14 @@ class Model(object):
 
 		if generating:
 			return self.model.fit_generator(
-				self.data.batch_generator(batch_size, self.image_data_fmt),
+				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape),
 				int(len(self.data.training_files) / batch_size),
 				verbose=1,
 				callbacks=callbacks,
 				epochs=n_epoch
 			)
 		else:
+			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			return self.model.fit(x_train, y_train,
 				batch_size=batch_size,
 				verbose=1,
