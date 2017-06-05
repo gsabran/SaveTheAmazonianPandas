@@ -1,15 +1,12 @@
 from tqdm import tqdm
 import os
-import shutil
 from constants import ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE, LABEL_FILE
+from utils import remove
 
 from subprocess import call
 
 list_imgs = sorted(os.listdir(ORIGINAL_DATA_DIR))
-try:
-  shutil.rmtree(DATA_DIR)
-except FileNotFoundError:
-  pass
+remove(DATA_DIR)
 os.mkdir(DATA_DIR)
 
 # rotate and flip images

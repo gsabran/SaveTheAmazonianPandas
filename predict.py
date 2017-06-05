@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import argparse
 import os
+import random
 from shutil import copyfile
 from keras import backend as K
 import numpy as np
@@ -8,10 +9,12 @@ from skimage.io import imread, imshow, imsave, show
 from keras.models import load_model
 from constants import LABELS
 from utils import get_uniq_name, get_predictions
-from model import CNN, TRAINED_MODEL, IMG_ROWS, IMG_COLS, CHANNELS, ModelCNN
+from models.simple_cnn import SimpleCNN
+from train import TRAINED_MODEL
+from constants import IMG_ROWS, IMG_COLS, CHANNELS
 
 TEST_DATA_DIR = "./rawInput/test-jpg"
-TRAIN_DATA_DIR = "./rawInput/train-jpg-augmented"
+TRAIN_DATA_DIR = "./rawInput/train-jpg"
 
 if __name__ == "__main__":
 	with K.get_session():
@@ -20,10 +23,11 @@ if __name__ == "__main__":
 		parser.add_argument("--data", default="test", help="The set of data to predict on. Either 'test' or 'train'", type=str)
 		parser.add_argument('-m', '--model', default=TRAINED_MODEL, help='The model to load', type=str)
 		parser.add_argument('-b', '--batch-size', default=64, help='The size of the batch', type=int)
+		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
 		args = vars(parser.parse_args())
 		print('args', args)
 
-		cnn = ModelCNN()
+		cnn = SimpleCNN(multi_gpu=False)
 		cnn.model = load_model(args["model"])
 
 		if args["file"] != "":
@@ -34,8 +38,18 @@ if __name__ == "__main__":
 		else:
 			print("Reading images...")
 			data_dir = TRAIN_DATA_DIR if args["data"] == "train" else TEST_DATA_DIR
-
-			list_imgs = [f for f in sorted(os.listdir(data_dir)) if (".jpg" in f or ".tif" in f)]
+			
+			if args["data"] == "train":
+				with open('train/training-files.csv') as f_training_files, open('train/validation-files.csv') as f_validation_files:
+					training_files = f_training_files.readline().split(",")
+					validation_files = f_validation_files.readline().split(",")
+				list_imgs = training_files + validation_files
+				list_imgs = ["{f}.jpg".format(f=f) for f in list_imgs]
+			else:
+				list_imgs = [f for f in sorted(os.listdir(TRAIN_DATA_DIR)) if (".jpg" in f or ".tif" in f)]
+				p = args["data_proportion"]
+				list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
+			
 			imgs = []
 			with tqdm(total=len(list_imgs)) as pbar:
 				for f_img in list_imgs:

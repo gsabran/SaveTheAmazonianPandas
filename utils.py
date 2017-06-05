@@ -1,4 +1,5 @@
 from __future__ import division
+from shutil import rmtree
 import subprocess
 import time
 import string
@@ -66,3 +67,15 @@ def files_and_cdf_from_proba(proba):
 
 def pick(n, files, cdf):
 	return [files[bisect(cdf, random())] for i in range(n)]
+
+def remove(path):
+	"""
+	Remove a file or directory if it exists, else do nothing
+	"""
+	try:
+		if os.path.isdir(path):
+			rmtree(path)
+		else:
+			os.remove(path)
+	except FileNotFoundError:
+		pass

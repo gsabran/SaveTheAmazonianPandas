@@ -13,7 +13,7 @@ class Model(object):
 	"""
 	An absctract structure for a model that can be trained and make predictions
 	"""
-	def __init__(self, data, multi_gpu=True):
+	def __init__(self, data=None, multi_gpu=True):
 		"""
 		data: the dataset to use
 		multi_gpu: wether the model should use several GPUs or not

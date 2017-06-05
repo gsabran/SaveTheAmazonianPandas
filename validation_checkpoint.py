@@ -18,7 +18,7 @@ class ValidationCheckpoint(Callback):
 		self.remaining_patience = patience
 
 	def on_epoch_end(self, epoch, logs=None):
-		print("Scoring validation_inputdation set...".format(epoch=epoch))
+		print("Scoring validation dataset...".format(epoch=epoch))
 		score = self.scoring(self.model, self.validation_input, self.validation_output)
 		print("Validation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
 		if score <= self.best_score:
