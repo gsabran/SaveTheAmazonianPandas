@@ -24,10 +24,13 @@ if __name__ == "__main__":
 		parser.add_argument('-m', '--model', default=TRAINED_MODEL, help='The model to load', type=str)
 		parser.add_argument('-b', '--batch-size', default=64, help='The size of the batch', type=int)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
+		parser.add_argument('--cpu-only', default=False, help='Wether to only use CPU or not', type=bool)
 		args = vars(parser.parse_args())
 		print('args', args)
 
-		cnn = SimpleCNN(multi_gpu=False)
+		# it'd be better to load the correct class since implementations
+		# of functions such as parallelize might differ
+		cnn = SimpleCNN(multi_gpu=args['cpu_only'])
 		cnn.model = load_model(args["model"])
 
 		if args["file"] != "":

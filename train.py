@@ -32,6 +32,7 @@ if __name__ == "__main__":
 		parser.add_argument('-b', '--batch-size', default=24, help='the number items per training batch', type=int)
 		parser.add_argument('--validation-ratio', default=0.0, help='the proportion of labeled input kept aside of training for validation', type=float)
 		parser.add_argument('-g', '--gpu', default=0, help='the number of gpu to use', type=int)
+		parser.add_argument('--cpu-only', default=False, help='Wether to only use CPU or not', type=bool)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
 		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
@@ -50,10 +51,10 @@ if __name__ == "__main__":
 		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, VALIDATION_RATIO, sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
-			cnn = XceptionCNN(data, multi_gpu=N_GPU != 0)
+			cnn = XceptionCNN(data, multi_gpu=args['cpu_only'])
 		else:
 			print("Using simple model architecture")
-			cnn = SimpleCNN(data, multi_gpu=N_GPU != 0)
+			cnn = SimpleCNN(data, multi_gpu=args['cpu_only'])
 
 		if args["model"] != '':
 			print("Loading model {m}".format(m=args['model']))
