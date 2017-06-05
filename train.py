@@ -4,11 +4,13 @@ import argparse
 import os
 from keras.models import load_model
 from keras import backend as K
+import sys
 
 from constants import ORIGINAL_DATA_DIR, ORIGINAL_LABEL_FILE
 from utils import get_uniq_name, remove
 from models.exception import XceptionCNN
 from models.simple_cnn import SimpleCNN
+from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
 
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -25,13 +27,14 @@ if __name__ == "__main__":
 
 	os.makedirs("train/archive", exist_ok=True)
 	os.makedirs("train/tensorboard", exist_ok=True)
+	MAX_NUMBER_OF_GPUS = get_gpu_max_number()
 
 	with K.get_session():
 		parser = argparse.ArgumentParser(description='train model')
 		parser.add_argument('-e', '--epochs', default=10, help='the number of epochs for fitting', type=int)
 		parser.add_argument('-b', '--batch-size', default=24, help='the number items per training batch', type=int)
 		parser.add_argument('--validation-ratio', default=0.0, help='the proportion of labeled input kept aside of training for validation', type=float)
-		parser.add_argument('-g', '--gpu', default=0, help='the number of gpu to use', type=int)
+		parser.add_argument('-g', '--gpu', default=MAX_NUMBER_OF_GPUS, help='the number of gpu to use', type=int)
 		parser.add_argument('--cpu-only', default=False, help='Wether to only use CPU or not', type=bool)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
 		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
@@ -41,8 +44,18 @@ if __name__ == "__main__":
 		print('args', args)
 
 		N_EPOCH = args['epochs']
-		N_GPU = args['gpu']
-		BATCH_SIZE = args['batch_size'] * N_GPU
+		if args['cpu_only']:
+			n_gpus = 0
+		else:
+			n_gpus = args['gpu']
+			if n_gpus == 0:
+				print("Error: cannot use 0 GPUs in non CPU only mode")
+				sys.exit(1)
+			if n_gpus > MAX_NUMBER_OF_GPUS:
+				print("Error: only {a} GPUs are available on this machine, while {b} have been requested".format(a=MAX_NUMBER_OF_GPUS, b=n_gpus))
+				sys.exit(1)
+
+		BATCH_SIZE = args['batch_size'] * (1 if args['cpu_only'] else n_gpus)
 		VALIDATION_RATIO = args['validation_ratio']
 
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
@@ -51,10 +64,10 @@ if __name__ == "__main__":
 		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, VALIDATION_RATIO, sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
-			cnn = XceptionCNN(data, multi_gpu=args['cpu_only'])
+			cnn = XceptionCNN(data, n_gpus=n_gpus)
 		else:
 			print("Using simple model architecture")
-			cnn = SimpleCNN(data, multi_gpu=args['cpu_only'])
+			cnn = SimpleCNN(data, n_gpus=n_gpus)
 
 		if args["model"] != '':
 			print("Loading model {m}".format(m=args['model']))

@@ -13,13 +13,15 @@ class Model(object):
 	"""
 	An absctract structure for a model that can be trained and make predictions
 	"""
-	def __init__(self, data=None, multi_gpu=True):
+	def __init__(self, data=None, n_gpus=-1):
 		"""
 		data: the dataset to use
-		multi_gpu: wether the model should use several GPUs or not
+		n_gpus: The number of GPUs to use. -1 for the max, 0 for CPU only
 		"""
 		self.data = data
-		self.multi_gpu = multi_gpu
+		self.n_gpus = n_gpus
+		if n_gpus == -1:
+			self.n_gpus = get_gpu_max_number()
 		self.model = None
 
 		self.image_data_fmt = K.image_data_format()
@@ -29,11 +31,9 @@ class Model(object):
 			self.input_shape = (IMG_ROWS, IMG_COLS, CHANNELS)
 
 		self.create_base_model()
-		self.n_gpus = get_gpu_max_number()
-		if self.multi_gpu:
+		if self.n_gpus != 0:
 			self.paralelize()
 		self.compile()
-		print("Model", self.n_gpus)
 
 	def create_base_model(self):
 		"""

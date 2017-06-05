@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
 		# it'd be better to load the correct class since implementations
 		# of functions such as parallelize might differ
-		cnn = SimpleCNN(multi_gpu=args['cpu_only'])
+		cnn = SimpleCNN(n_gpus=-1 if args['cpu_only'] else 0)
 		cnn.model = load_model(args["model"])
 
 		if args["file"] != "":
