@@ -41,14 +41,14 @@ class VGG16CNN(Model):
 		pass # paralelization done during fitting
 
 	def compile(self):
-		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy', decay=0.8)
+		self.model.compile(optimizer='rmsprop', loss='binary_crossentropy', decay=0.5)
 
 	def compile_sgd(self):
-		self.model.compile(optimizer=SGD(lr=0.0001, momentum=0.9, decay=0.8), loss='binary_crossentropy')
+		self.model.compile(optimizer=SGD(lr=0.0001, momentum=0.9, decay=0.2), loss='binary_crossentropy')
 
 	def fit(self, n_epoch, batch_size, validating=True, generating=False):
 		print("Fitting top dense layers")
-		super(VGG16CNN, self).fit(5, batch_size, validating=validating, generating=generating)
+		super(VGG16CNN, self).fit(5, batch_size, validating=validating, generating=False)
 
 		for layer in self.model.layers:
 			layer.trainable = True
@@ -59,4 +59,4 @@ class VGG16CNN(Model):
 		self.compile_sgd()
 
 		print("Fitting lower conv layers")
-		return super(VGG16CNN, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
+		return super(VGG16CNN, self).fit(n_epoch, batch_size, validating=validating, generating=False)
