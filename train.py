@@ -8,6 +8,7 @@ from keras import backend as K
 from constants import ORIGINAL_DATA_DIR, ORIGINAL_LABEL_FILE
 from utils import get_uniq_name
 from models.exception import XceptionCNN
+from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
 from datasets.dataset import Dataset
 
@@ -26,7 +27,7 @@ if __name__ == "__main__":
 		parser.add_argument('--validation-ratio', default=0.0, help='the proportion of labeled input kept aside of training for validation', type=float)
 		parser.add_argument('-g', '--gpu', default=8, help='the number of gpu to use', type=int)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
-		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or left blank for now.', type=str)
+		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception" or "ekami" or left blank for now.', type=str)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
 
 		args = vars(parser.parse_args())
@@ -44,6 +45,9 @@ if __name__ == "__main__":
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
 			cnn = XceptionCNN(data)
+		elif args["cnn"] == "ekami":
+			print("Using Ekami architecture")
+			cnn = AmazonKerasClassifier(data)
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data)
