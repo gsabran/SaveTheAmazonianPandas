@@ -27,6 +27,7 @@ class Model(object):
 			self.input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 		else:
 			self.input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
+		self.img_size = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
