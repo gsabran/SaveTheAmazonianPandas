@@ -66,8 +66,11 @@ class AmazonKerasClassifier(Model):
 
     def fit(self, n_epoch, batch_size, validating=True, generating=True, learn_rate=0.001):
         self.compile(learn_rate)
-        super(AmazonKerasClassifier, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
-
+        super(AmazonKerasClassifier, self).fit(20, batch_size, validating=validating, generating=generating)
+        self.compile(learn_rate * 0.1)
+        super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
+        self.compile(learn_rate * 0.1)
+        super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
 '''def train_model(self, x_train, y_train, learn_rate=0.001, epoch=5, batch_size=128, validation_split_size=0.2, train_callbacks=()):
                 history = LossHistory()
 
