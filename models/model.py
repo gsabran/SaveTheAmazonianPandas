@@ -46,7 +46,8 @@ class Model(object):
 		"""
 		Adapt the model to parallel GPU architecture
 		"""
-		self.model = to_multi_gpu(self.model, self.n_gpus)
+		if self.n_gpus > 1:
+			self.model = to_multi_gpu(self.model, self.n_gpus)
 
 	def compile(self):
 		self.model.compile(
