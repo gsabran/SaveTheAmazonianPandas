@@ -27,6 +27,7 @@ class Model(object):
 			self.input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 		else:
 			self.input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
+		self.img_size = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 
 		self.create_base_model()
 		self.n_gpus = get_gpu_max_number()
@@ -45,7 +46,8 @@ class Model(object):
 		"""
 		Adapt the model to parallel GPU architecture
 		"""
-		self.model = to_multi_gpu(self.model, self.n_gpus)
+		if self.n_gpus > 1:
+			self.model = to_multi_gpu(self.model, self.n_gpus)
 
 	def compile(self):
 		self.model.compile(
