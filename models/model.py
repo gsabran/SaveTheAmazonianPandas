@@ -1,6 +1,6 @@
 import keras
 from keras import backend as K
-from keras.callbacks import CSVLogger, TensorBoard
+from keras.callbacks import CSVLogger, TensorBoard, ReduceLROnPlateau
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
@@ -64,7 +64,14 @@ class Model(object):
 
 		csv_logger = CSVLogger('train/training.log')
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
-		callbacks = [csv_logger, tensorboard]
+		learning_rate_reduction = ReduceLROnPlateau(
+			monitor='loss', 
+			patience=3, 
+			verbose=1, 
+			factor=0.5, 
+			min_lr=0.0001
+		)
+		callbacks = [csv_logger, tensorboard, learning_rate_reduction]
 
 		if validating:
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
