@@ -1,9 +1,9 @@
-from constants import ORIGINAL_DATA_DIR
+from constants import TRAIN_DATA_DIR
 from datasets.dataset import Dataset
 import os, random
 from tqdm import tqdm
 
-list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
+list_imgs = [f.split(".")[0] for f in sorted(os.listdir(TRAIN_DATA_DIR))]
 
 data = Dataset(list_imgs, 0.0, "")
 

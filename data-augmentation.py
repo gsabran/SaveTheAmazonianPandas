@@ -1,11 +1,11 @@
 from tqdm import tqdm
 import os
-from constants import ORIGINAL_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE, LABEL_FILE
+from constants import TRAIN_DATA_DIR, DATA_DIR, ORIGINAL_LABEL_FILE, LABEL_FILE
 from utils import remove
 
 from subprocess import call
 
-list_imgs = sorted(os.listdir(ORIGINAL_DATA_DIR))
+list_imgs = sorted(os.listdir(TRAIN_DATA_DIR))
 remove(DATA_DIR)
 os.mkdir(DATA_DIR)
 
@@ -21,9 +21,9 @@ with tqdm(total=len(list_imgs)) as pbar:
         angle = 0
       f2 = "{n}--{i}.{ext}".format(n=name, i=i, ext=ext)
       if flip:
-        call(["convert", "-rotate", str(angle), "-flip", os.path.join(ORIGINAL_DATA_DIR, f), os.path.join(DATA_DIR, f2)])
+        call(["convert", "-rotate", str(angle), "-flip", os.path.join(TRAIN_DATA_DIR, f), os.path.join(DATA_DIR, f2)])
       else:
-        call(["convert", "-rotate", str(angle), os.path.join(ORIGINAL_DATA_DIR, f), os.path.join(DATA_DIR, f2)])
+        call(["convert", "-rotate", str(angle), os.path.join(TRAIN_DATA_DIR, f), os.path.join(DATA_DIR, f2)])
       angle += 90
     pbar.update(1)
 

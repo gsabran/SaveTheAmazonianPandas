@@ -8,15 +8,15 @@ from skimage.io import imread
 from scipy.misc import imresize
 import numpy as np
 
-from constants import LABELS, ORIGINAL_DATA_DIR, CHANNELS, IMG_ROWS, IMG_COLS
-from utils import files_proba, files_and_cdf_from_proba, pick, get_labels_dict
+from constants import LABELS, TRAIN_DATA_DIR
+from utils import files_proba, files_and_cdf_from_proba, pick, get_labels_dict, get_resized_image
 
 class Dataset(object):
 	labels = LABELS
 	"""
 	A dataset that can be fed to a model
 	"""
-	def __init__(self, list_files, validation_ratio, sessionId, training_files=None, validation_files=None):
+	def __init__(self, list_files, validation_ratio, sessionId=None, training_files=None, validation_files=None):
 		"""
 		list_files: the list of paths to all images that can be used
 		validation_ratio: the proportion of data to keep aside for model validation
@@ -24,7 +24,7 @@ class Dataset(object):
 		training_files: a list of paths to files that should be used for training
 		validation_files: a list of paths to files that should be used for validation
 		"""
-		self.outputs = get_labels_dict()
+		self.outputs = get_labels_dict() # outputs might contain files that are unused
 		self.validation_ratio = validation_ratio
 		self.sessionId = sessionId
 
@@ -89,6 +89,9 @@ class Dataset(object):
 			yield (batch_x, outputs)
 
 	def _write_sets(self):
+		if self.sessionId is None:
+			return
+
 		with open('train/training-files.csv', 'w') as f:
 			f.write(','.join(self.training_files))
 		with open('train/validation-files.csv', 'w') as f:
@@ -103,10 +106,7 @@ class Dataset(object):
 		print("Reading inputs")
 		with tqdm(total=len(dataset)) as pbar:
 			for f in dataset:
-				img = imread(os.path.join(ORIGINAL_DATA_DIR, "{}.jpg".format(f)))
-				if image_data_fmt == 'channels_first':
-					img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
-				X.append(imresize(img, input_shape))
+				X.append(get_resized_image(f, TRAIN_DATA_DIR, image_data_fmt, input_shape))
 				file = f.split('/')[-1].split('.')[0]
 				Y.append(self.outputs[file])
 				pbar.update(1)

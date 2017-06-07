@@ -5,31 +5,27 @@ import random
 from shutil import copyfile
 from keras import backend as K
 import numpy as np
-from skimage.io import imread, imshow, imsave, show
 from keras.models import load_model
-from utils import get_uniq_name, get_predictions, get_labels_dict, optimise_f2_thresholds
+from utils import get_uniq_name, get_predictions, get_labels_dict, optimise_f2_thresholds, get_resized_image, get_inputs_shape
 from models.simple_cnn import SimpleCNN
 from train import TRAINED_MODEL
-from constants import IMG_ROWS, IMG_COLS, CHANNELS, LABELS, ORIGINAL_LABEL_FILE
+from constants import LABELS, TRAIN_DATA_DIR, TEST_DATA_DIR
 
-TEST_DATA_DIR = "./rawInput/test-jpg"
-TRAIN_DATA_DIR = "./rawInput/train-jpg"
-
-def predict(image_files, data_dir, thresholds=[0.5]*len(LABELS)):
+def predict(image_files, data_dir, thresholds=np.array([0.5]*len(LABELS)), batch_size=64):
 	"""
 	Yield tuples of predictions as (image_name, probas, tags)
 	"""
-	imgs = []
-	print("Reading images...")
-	with tqdm(total=len(image_files)) as pbar:
-		for f_img in image_files:
-			imgs.append(imread(os.path.join(data_dir, f_img)))
-			pbar.update(1)
 	print("Starting predictions...")
+	imgs = []
+	with tqdm(total=len(image_files)) as pbar:
+		for f in image_files:
+			imgs .append(get_resized_image(f, data_dir, image_data_fmt, input_shape))
+			pbar.update(1)
+	imgs = np.array(imgs)
 	with tqdm(total=len(image_files)) as pbar:
 		# larger batch size (relatively to the number of GPU) run out of memory
-		proba_predictions = cnn.model.predict(np.array(imgs), batch_size=args["batch_size"], verbose=1)
-		tag_predictions = get_predictions(np.array(predictions), thresholds)
+		proba_predictions = cnn.model.predict(imgs, batch_size=batch_size, verbose=1)
+		tag_predictions = get_predictions(proba_predictions, thresholds)
 		for f_img, probas, tags in zip(image_files, proba_predictions, tag_predictions):
 			yield (f_img, probas, tags)
 			pbar.update(1)
@@ -52,9 +48,9 @@ if __name__ == "__main__":
 		cnn = SimpleCNN(n_gpus=-1 if args['cpu_only'] else 0)
 		cnn.model = load_model(args["model"])
 
+		image_data_fmt, input_shape = get_inputs_shape()
 		if args["file"] != "":
-			img = imread(args["file"])
-			img = img.reshape((1, IMG_ROWS, IMG_COLS, CHANNELS))
+			img = get_resized_image(args["file"], TRAIN_DATA_DIR, image_data_fmt, input_shape)
 			print("Predicting for {fn}".format(fn=args["file"]))
 			print(cnn.model.predict(img))
 		else:
@@ -62,14 +58,13 @@ if __name__ == "__main__":
 			First use validation data to find optimal thresholds to make tag predictions from proba
 			"""
 			print("Finding optimal thresholds...")
-			with open('train/validation-files.csv') as f_validation_files, open("") as f_:
+			with open('train/validation-files.csv') as f_validation_files:
 				validation_files = f_validation_files.readline().split(",")
-				validation_imgs = ["{f}.jpg".format(f=f) for f in list_imgs]
-				probas = np.array((p for f, p, t in predict(validation_imgs, TRAIN_DATA_DIR, thresholds)))
+				probas = np.array([p for f, p, t in predict(validation_files, TRAIN_DATA_DIR)])
 				labels = get_labels_dict()
-				true_tags = np.array((labels[img] for img in validation_imgs))
+				true_tags = np.array([labels[img] for img in validation_files])
 				thresholds = optimise_f2_thresholds(true_tags, probas)
-				print("thresholds", thresholds)
+				print("Optimal thresholds are", thresholds)
 
 			data_dir = TRAIN_DATA_DIR if args["data"] == "train" else TEST_DATA_DIR
 			
@@ -80,9 +75,8 @@ if __name__ == "__main__":
 				with open('train/training-files.csv') as f_training_files:
 					training_files = f_training_files.readline().split(",")
 				list_imgs = training_files + validation_files
-				list_imgs = ["{f}.jpg".format(f=f) for f in list_imgs]
 			else:
-				list_imgs = [f for f in sorted(os.listdir(TRAIN_DATA_DIR)) if (".jpg" in f or ".tif" in f)]
+				list_imgs = [f.split('.')[0] for f in sorted(os.listdir(data_dir)) if (".jpg" in f or ".tif" in f)]
 				p = args["data_proportion"]
 				list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
 			
@@ -95,7 +89,7 @@ if __name__ == "__main__":
 					pred_f.write("image_name,tags\n")
 					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(LABELS)))
 
-					for f_img, probas, tags in predict(list_imgs, data_dir):
+					for f_img, probas, tags in predict(list_imgs, data_dir, thresholds=thresholds):
 						raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
 						pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 

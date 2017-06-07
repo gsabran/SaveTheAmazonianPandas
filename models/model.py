@@ -4,10 +4,9 @@ from keras.callbacks import CSVLogger, TensorBoard
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
-from constants import CHANNELS, IMG_ROWS, IMG_COLS, LABELS, IMG_SCALE
-from validate_model import F2Score
+from constants import LABELS
 from validation_checkpoint import ValidationCheckpoint
-from utils import get_predictions
+from utils import get_predictions, get_inputs_shape, F2Score
 
 class Model(object):
 	"""
@@ -24,11 +23,7 @@ class Model(object):
 			self.n_gpus = get_gpu_max_number()
 		self.model = None
 
-		self.image_data_fmt = K.image_data_format()
-		if self.image_data_fmt == 'channels_first':
-			self.input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
-		else:
-			self.input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
+		self.image_data_fmt, self.input_shape = get_inputs_shape()
 
 		self.create_base_model()
 		if self.n_gpus != 0:
@@ -76,7 +71,7 @@ class Model(object):
 
 			def score(model, data_set, expectations):
 				rawPredictions = model.predict(data_set, verbose=1)
-				predictions = get_predictions(np.array(rawPredictions))
+				predictions = get_predictions(rawPredictions, np.array([0.5] * len(LABELS)))
 				predictions = np.array([x for x in predictions])
 				return np.mean([F2Score(
 					prediction,

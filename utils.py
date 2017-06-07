@@ -5,12 +5,15 @@ import time
 import string
 import numpy as np
 from sklearn.metrics import fbeta_score
+from skimage.io import imread
+from scipy.misc import imresize
 import os
 import math
+from keras import backend as K
 
 from bisect import bisect
 from random import random
-from constants import LABELS, WEATHER_IDX, DATA_DIR, ORIGINAL_LABEL_FILE
+from constants import LABELS, WEATHER_IDX, DATA_DIR, ORIGINAL_LABEL_FILE, CHANNELS, IMG_ROWS, IMG_COLS, IMG_SCALE, TRAIN_DATA_DIR
 
 def get_uniq_name():
 	"""
@@ -26,11 +29,11 @@ def get_uniq_name():
 	return "{t}-{h}-{m}".format(t=t, h=gitHash, m=gitMessage).lower().replace(" ", "_")
 
 
-def get_predictions(y, threshold=0.5):
+def get_predictions(y, thresholds):
 	"""
 	return the label predictions for an input of shape (n, labelCount)
 	"""
-	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > threshold]]
+	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > thresholds[i]]]
 	return (row_pred(row) for row in y)
 
 # from https://www.kaggle.com/c/planet-understanding-the-amazon-from-space/discussion/32475
@@ -59,8 +62,6 @@ def optimise_f2_thresholds(y, p, verbose=True, resolution=100):
 				best_i2 = i2
 				best_score = score
 		x[i] = best_i2
-		if verbose:
-			print(i, best_i2, best_score)
 
 	return x
 
@@ -74,10 +75,30 @@ def get_labels_dict():
 		for l in f:
 			filename, rawTags = l.strip().split(',')
 			tags = rawTags.split(' ')
-			bool_tags = [1 if tag in tags else 0 for tag in self.labels]
+			bool_tags = [1 if tag in tags else 0 for tag in LABELS]
 			file = filename.split('/')[-1].split('.')[0]
 			labels_dict[file] = bool_tags
 	return labels_dict
+
+def get_inputs_shape():
+	"""
+	Return the image format, and the share images should have
+	"""
+	image_data_fmt = K.image_data_format()
+	if image_data_fmt == 'channels_first':
+		input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
+	else:
+		input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
+	return image_data_fmt, input_shape
+
+def get_resized_image(f, data_dir, image_data_fmt, input_shape):
+	"""
+	Read the image from file and return it in the expected size
+	"""
+	img = imread(os.path.join(data_dir, "{}.jpg".format(f)))
+	if image_data_fmt == 'channels_first':
+		img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
+	return imresize(img, input_shape)
 
 # deprecated
 def get_generated_images(originalImageFileName, ext="jpg"):
@@ -129,3 +150,19 @@ def remove(path):
 			os.remove(path)
 	except FileNotFoundError:
 		pass
+
+def F2Score(predicted, actual):
+	# see https://www.kaggle.com/c/planet-understanding-the-amazon-from-space#evaluation
+	predicted = set(predicted)
+	actual = set(actual)
+	tp = len(predicted & actual)
+	tn = len(LABELS) - len(predicted | actual)
+	fp = len(predicted) - tp
+	fn = (len(LABELS) - len(predicted)) - tn
+	p = tp / (tp + fp)
+	r = tp / (tp + fn)
+	if p == 0 or r == 0:
+		return 0
+	b = 2
+	return (1 + b**2) * p * r / (b**2*p + r)
+
