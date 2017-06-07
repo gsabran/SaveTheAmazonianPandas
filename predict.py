@@ -7,14 +7,33 @@ from keras import backend as K
 import numpy as np
 from skimage.io import imread, imshow, imsave, show
 from keras.models import load_model
-from constants import LABELS
-from utils import get_uniq_name, get_predictions
+from utils import get_uniq_name, get_predictions, get_labels_dict, optimise_f2_thresholds
 from models.simple_cnn import SimpleCNN
 from train import TRAINED_MODEL
-from constants import IMG_ROWS, IMG_COLS, CHANNELS
+from constants import IMG_ROWS, IMG_COLS, CHANNELS, LABELS, ORIGINAL_LABEL_FILE
 
 TEST_DATA_DIR = "./rawInput/test-jpg"
 TRAIN_DATA_DIR = "./rawInput/train-jpg"
+
+def predict(image_files, data_dir, thresholds=[0.5]*len(LABELS)):
+	"""
+	Yield tuples of predictions as (image_name, probas, tags)
+	"""
+	imgs = []
+	print("Reading images...")
+	with tqdm(total=len(image_files)) as pbar:
+		for f_img in image_files:
+			imgs.append(imread(os.path.join(data_dir, f_img)))
+			pbar.update(1)
+	print("Starting predictions...")
+	with tqdm(total=len(image_files)) as pbar:
+		# larger batch size (relatively to the number of GPU) run out of memory
+		proba_predictions = cnn.model.predict(np.array(imgs), batch_size=args["batch_size"], verbose=1)
+		tag_predictions = get_predictions(np.array(predictions), thresholds)
+		for f_img, probas, tags in zip(image_files, proba_predictions, tag_predictions):
+			yield (f_img, probas, tags)
+			pbar.update(1)
+
 
 if __name__ == "__main__":
 	with K.get_session():
@@ -39,13 +58,27 @@ if __name__ == "__main__":
 			print("Predicting for {fn}".format(fn=args["file"]))
 			print(cnn.model.predict(img))
 		else:
-			print("Reading images...")
+			"""
+			First use validation data to find optimal thresholds to make tag predictions from proba
+			"""
+			print("Finding optimal thresholds...")
+			with open('train/validation-files.csv') as f_validation_files, open("") as f_:
+				validation_files = f_validation_files.readline().split(",")
+				validation_imgs = ["{f}.jpg".format(f=f) for f in list_imgs]
+				probas = np.array((p for f, p, t in predict(validation_imgs, TRAIN_DATA_DIR, thresholds)))
+				labels = get_labels_dict()
+				true_tags = np.array((labels[img] for img in validation_imgs))
+				thresholds = optimise_f2_thresholds(true_tags, probas)
+				print("thresholds", thresholds)
+
 			data_dir = TRAIN_DATA_DIR if args["data"] == "train" else TEST_DATA_DIR
 			
+			"""
+			Then make tag predictions
+			"""
 			if args["data"] == "train":
-				with open('train/training-files.csv') as f_training_files, open('train/validation-files.csv') as f_validation_files:
+				with open('train/training-files.csv') as f_training_files:
 					training_files = f_training_files.readline().split(",")
-					validation_files = f_validation_files.readline().split(",")
 				list_imgs = training_files + validation_files
 				list_imgs = ["{f}.jpg".format(f=f) for f in list_imgs]
 			else:
@@ -53,13 +86,6 @@ if __name__ == "__main__":
 				p = args["data_proportion"]
 				list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
 			
-			imgs = []
-			with tqdm(total=len(list_imgs)) as pbar:
-				for f_img in list_imgs:
-					imgs.append(imread(os.path.join(data_dir, f_img)))
-					pbar.update(1)
-			print("Starting predictions...")
-			with tqdm(total=len(list_imgs)) as pbar:
 				testId = get_uniq_name()
 				predictionFile = "./predict/{d}-predict.csv".format(d=args["data"])
 				rawPredictionFile = "./predict/{d}-predict-raw.csv".format(d=args["data"])
@@ -69,15 +95,9 @@ if __name__ == "__main__":
 					pred_f.write("image_name,tags\n")
 					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(LABELS)))
 
-					# larger batch size (relatively to the number of GPU) run out of memory
-					predictions = cnn.model.predict(np.array(imgs), batch_size=args["batch_size"], verbose=1)
-					for f_img, prediction in zip(list_imgs, predictions):
-						raw_pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join([str(i) for i in prediction])))
-
-					allTags = get_predictions(np.array(predictions))
-					for f_img, tags in zip(list_imgs, allTags):
+					for f_img, probas, tags in predict(list_imgs, data_dir):
+						raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
 						pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
-						pbar.update(1)
 
 			copyfile(predictionFile, "./predict/archive/{x}-{d}-predict.csv".format(x=testId, d=args["data"]))
 			copyfile(rawPredictionFile, "./predict/archive/{x}-{d}-predict-raw.csv".format(x=testId, d=args["data"]))

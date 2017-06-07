@@ -4,12 +4,13 @@ import subprocess
 import time
 import string
 import numpy as np
+from sklearn.metrics import fbeta_score
 import os
 import math
 
 from bisect import bisect
 from random import random
-from constants import LABELS, WEATHER_IDX, DATA_DIR
+from constants import LABELS, WEATHER_IDX, DATA_DIR, ORIGINAL_LABEL_FILE
 
 def get_uniq_name():
 	"""
@@ -32,6 +33,53 @@ def get_predictions(y, threshold=0.5):
 	row_pred = lambda row: [LABELS[k] for k in [WEATHER_IDX[np.argmax(row[WEATHER_IDX])]] + [i for i, v in enumerate(row) if i not in WEATHER_IDX and v > threshold]]
 	return (row_pred(row) for row in y)
 
+# from https://www.kaggle.com/c/planet-understanding-the-amazon-from-space/discussion/32475
+def optimise_f2_thresholds(y, p, verbose=True, resolution=100):
+	"""
+	find optimal thresholds to predict labels
+	- Parameter y: a (n) array of 0 - 1 representing true values
+	- Parameter p: a (n, 17) matrix of probabilies
+	"""
+	def mf(x):
+		p2 = np.zeros_like(p)
+		for i in range(len(LABELS)):
+			p2[:, i] = (p[:, i] > x[i]).astype(np.int)
+		score = fbeta_score(y, p2, beta=2, average='samples')
+		return score
+
+	x = [0.2] * len(LABELS)
+	for i in range(len(LABELS)):
+		best_i2 = 0
+		best_score = 0
+		for i2 in range(resolution):
+			i2 /= resolution
+			x[i] = i2
+			score = mf(x)
+			if score > best_score:
+				best_i2 = i2
+				best_score = score
+		x[i] = best_i2
+		if verbose:
+			print(i, best_i2, best_score)
+
+	return x
+
+def get_labels_dict():
+	"""
+	Return a dictionary of { image_name: [0-1 tag] }
+	"""
+	labels_dict = {}
+	with open(ORIGINAL_LABEL_FILE) as f:
+		f.readline()
+		for l in f:
+			filename, rawTags = l.strip().split(',')
+			tags = rawTags.split(' ')
+			bool_tags = [1 if tag in tags else 0 for tag in self.labels]
+			file = filename.split('/')[-1].split('.')[0]
+			labels_dict[file] = bool_tags
+	return labels_dict
+
+# deprecated
 def get_generated_images(originalImageFileName, ext="jpg"):
 	"""
 	return an array of images generated from an original image.

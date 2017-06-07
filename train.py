@@ -6,7 +6,7 @@ from keras.models import load_model
 from keras import backend as K
 import sys
 
-from constants import ORIGINAL_DATA_DIR, ORIGINAL_LABEL_FILE
+from constants import ORIGINAL_DATA_DIR
 from utils import get_uniq_name, remove
 from models.exception import XceptionCNN
 from models.vgg16 import VGG16CNN
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(ORIGINAL_DATA_DIR))]
 		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args['data_proportion']))
 
-		data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, VALIDATION_RATIO, sessionId)
+		data = Dataset(list_imgs, VALIDATION_RATIO, sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
 			cnn = XceptionCNN(data, n_gpus=n_gpus)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 			with open('train/training-files.csv') as f_training_files, open('train/validation-files.csv') as f_validation_files:
 				training_files = f_training_files.readline().split(",")
 				validation_files = f_validation_files.readline().split(",")
-				data = Dataset(list_imgs, ORIGINAL_LABEL_FILE, VALIDATION_RATIO, sessionId, training_files=training_files, validation_files=validation_files)
+				data = Dataset(list_imgs, VALIDATION_RATIO, sessionId, training_files=training_files, validation_files=validation_files)
 			cnn.model = load_model(args['model'])
 
 		cnn.fit(n_epoch=N_EPOCH, batch_size=BATCH_SIZE, generating=args['generate_data'])

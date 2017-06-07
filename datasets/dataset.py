@@ -9,24 +9,22 @@ from scipy.misc import imresize
 import numpy as np
 
 from constants import LABELS, ORIGINAL_DATA_DIR, CHANNELS, IMG_ROWS, IMG_COLS
-from utils import files_proba, files_and_cdf_from_proba, pick
+from utils import files_proba, files_and_cdf_from_proba, pick, get_labels_dict
 
 class Dataset(object):
 	labels = LABELS
 	"""
 	A dataset that can be fed to a model
 	"""
-	def __init__(self, list_files, labels_file, validation_ratio, sessionId, training_files=None, validation_files=None):
+	def __init__(self, list_files, validation_ratio, sessionId, training_files=None, validation_files=None):
 		"""
 		list_files: the list of paths to all images that can be used
-		labels_file: a path to the file with the labels
 		validation_ratio: the proportion of data to keep aside for model validation
 		sessionId: a uniq string used to write output files
 		training_files: a list of paths to files that should be used for training
 		validation_files: a list of paths to files that should be used for validation
 		"""
-		self.labels_file = labels_file
-		self.outputs = self._get_output()
+		self.outputs = get_labels_dict()
 		self.validation_ratio = validation_ratio
 		self.sessionId = sessionId
 
@@ -97,18 +95,6 @@ class Dataset(object):
 			f.write(','.join(self.validation_files))
 		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=self.sessionId))
 		copyfile('train/validation-files.csv', 'train/archive/{f}-validation-files.csv'.format(f=self.sessionId))
-
-	def _get_output(self):
-		labels_dict = {}
-		with open(self.labels_file) as f:
-			f.readline()
-			for l in f:
-				filename, rawTags = l.strip().split(',')
-				tags = rawTags.split(' ')
-				bool_tags = [1 if tag in tags else 0 for tag in self.labels]
-				file = filename.split('/')[-1].split('.')[0]
-				labels_dict[file] = bool_tags
-		return labels_dict
 
 	def __xyData(self, image_data_fmt, isTraining, input_shape):
 		dataset = self.training_files if isTraining else self.validation_files
