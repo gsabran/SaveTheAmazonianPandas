@@ -5,9 +5,10 @@ class ValidationCheckpoint(Callback):
 	Callback tomeasure performance on validation set
 	- Parameter scoring: a function that takes (model, input, output) and returns a score
 	- Parameter patience: the number of epoch without improvement that can be tolerated
+	- Parameter checkpoint_path: path to where the checkpoint of the best model should be saved
 	"""
 
-	def __init__(self, scoring, validation_input, validation_output, patience=1):
+	def __init__(self, scoring, validation_input, validation_output, checkpoint_path, patience=1):
 		super(ValidationCheckpoint, self).__init__()
 		self.scoring = scoring
 		self.validation_input = validation_input
@@ -16,6 +17,7 @@ class ValidationCheckpoint(Callback):
 		self.best_epoch = -1
 		self.patience = patience
 		self.remaining_patience = patience
+		self.checkpoint_path = checkpoint_path
 
 	def on_epoch_end(self, epoch, logs=None):
 		print("Scoring validation_inputdation set...".format(epoch=epoch))
@@ -31,3 +33,4 @@ class ValidationCheckpoint(Callback):
 			self.best_score = score
 			self.remaining_patience = self.patience
 			self.best_epoch = epoch
+			self.model.save(self.checkpoint_path, overwrite=True)

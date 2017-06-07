@@ -1,6 +1,6 @@
 import keras
 from keras import backend as K
-from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
+from keras.callbacks import CSVLogger, TensorBoard
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
@@ -67,9 +67,8 @@ class Model(object):
 		print("Fitting on data of size", self.input_shape)
 
 		csv_logger = CSVLogger('train/training.log')
-		checkpoint = ModelCheckpoint(filepath='train/checkpoint.hdf5', monitor='binary_crossentropy', verbose=1, save_best_only=True)
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
-		callbacks = [csv_logger, checkpoint, tensorboard]
+		callbacks = [csv_logger, tensorboard]
 
 		if validating:
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
@@ -83,7 +82,13 @@ class Model(object):
 					[LABELS[i] for i, x in enumerate(expectation) if x == 1]
 				) for prediction, expectation in zip(predictions, expectations)])
 
-			validationCheckpoint = ValidationCheckpoint(scoring=score, validation_input=x_validate, validation_output=y_validate, patience=5)
+			validationCheckpoint = ValidationCheckpoint(
+				scoring=score,
+				validation_input=x_validate,
+				validation_output=y_validate,
+				checkpoint_path="train/checkpoint.hdf5",
+				patience=5
+			)
 			callbacks.append(validationCheckpoint)
 
 		if generating:
