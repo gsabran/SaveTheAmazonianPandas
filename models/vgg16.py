@@ -48,7 +48,7 @@ class VGG16CNN(Model):
 
 	def fit(self, n_epoch, batch_size, validating=True, generating=False):
 		print("Fitting top dense layers")
-		super(VGG16CNN, self).fit(5, batch_size, validating=validating, generating=False)
+		super(VGG16CNN, self).fit(5, batch_size, validating=validating, generating=generating)
 
 		for layer in self.model.layers:
 			layer.trainable = True
@@ -59,4 +59,4 @@ class VGG16CNN(Model):
 		self.compile_sgd()
 
 		print("Fitting lower conv layers")
-		return super(VGG16CNN, self).fit(n_epoch, batch_size, validating=validating, generating=False)
+		return super(VGG16CNN, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
