@@ -10,6 +10,7 @@ from constants import TRAIN_DATA_DIR
 from utils import get_uniq_name, remove
 from models.exception import XceptionCNN
 from models.vgg16 import VGG16CNN
+from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
 from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
@@ -38,7 +39,7 @@ if __name__ == "__main__":
 		parser.add_argument('-g', '--gpu', default=MAX_NUMBER_OF_GPUS, help='the number of gpu to use', type=int)
 		parser.add_argument('--cpu-only', default=False, help='Wether to only use CPU or not', type=bool)
 		parser.add_argument('-m', '--model', default='', help='A pre-built model to load', type=str)
-		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception", "vgg16" or left blank for now.', type=str)
+		parser.add_argument('-c', '--cnn', default='', help='Which CNN to use. Can be "xception", "vgg16" or "ekami" or left blank for now.', type=str)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
 		parser.add_argument('--generate-data', default=False, help='Wether to generate data or use the original dataset', type=bool)
 
@@ -70,6 +71,10 @@ if __name__ == "__main__":
 		elif args["cnn"] == "vgg16":
 			print("Using VGG16 architecture")
 			cnn = VGG16CNN(data, n_gpus=n_gpus)
+			cnn = XceptionCNN(data)
+		elif args["cnn"] == "ekami":
+			print("Using Ekami architecture")
+			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus)
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data, n_gpus=n_gpus)

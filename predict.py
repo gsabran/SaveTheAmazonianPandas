@@ -48,7 +48,7 @@ if __name__ == "__main__":
 		cnn = SimpleCNN(n_gpus=-1 if args['cpu_only'] else 0)
 		cnn.model = load_model(args["model"])
 
-		image_data_fmt, input_shape = get_inputs_shape()
+		image_data_fmt, input_shape, _ = get_inputs_shape()
 		if args["file"] != "":
 			img = get_resized_image(args["file"], TRAIN_DATA_DIR, image_data_fmt, input_shape)
 			print("Predicting for {fn}".format(fn=args["file"]))

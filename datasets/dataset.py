@@ -60,7 +60,7 @@ class Dataset(object):
 			# preprocessing_function=None
 		)
 
-	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True):
+	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True, augment=True):
 		"""
 		Generate batches fo size n, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
@@ -83,9 +83,12 @@ class Dataset(object):
 
 			batch_x = np.zeros(tuple([n] + list(inputs.shape)[1:]), dtype=K.floatx())
 			for i, inp in enumerate(inputs):
-				x = self.image_data_generator.random_transform(inp.astype(K.floatx()))
-				x = self.image_data_generator.standardize(x)
-				batch_x[i] = x
+				if augment:
+					x = self.image_data_generator.random_transform(inp.astype(K.floatx()))
+					x = self.image_data_generator.standardize(x)
+					batch_x[i] = x
+				else:
+					batch_x[i] = inp.astype(K.floatx())
 			yield (batch_x, outputs)
 
 	def _write_sets(self):

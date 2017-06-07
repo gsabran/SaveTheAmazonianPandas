@@ -23,7 +23,7 @@ class Model(object):
 			self.n_gpus = get_gpu_max_number()
 		self.model = None
 
-		self.image_data_fmt, self.input_shape = get_inputs_shape()
+		self.image_data_fmt, self.input_shape, self.img_size = get_inputs_shape()
 
 		self.create_base_model()
 		if self.n_gpus != 0:

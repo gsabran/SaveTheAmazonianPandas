@@ -89,7 +89,8 @@ def get_inputs_shape():
 		input_shape = (CHANNELS, int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 	else:
 		input_shape = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE), CHANNELS)
-	return image_data_fmt, input_shape
+	img_size = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
+	return image_data_fmt, input_shape, img_size
 
 def get_resized_image(f, data_dir, image_data_fmt, input_shape):
 	"""
