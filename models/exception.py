@@ -47,7 +47,7 @@ class XceptionCNN(Model):
 		for layer in self.model.layers[54:]:
 			layer.trainable = True
 
-		if self.multi_gpu:
+		if self.n_gpus > 0:
 			super(XceptionCNN, self).paralelize()
 
 		self.compile()
