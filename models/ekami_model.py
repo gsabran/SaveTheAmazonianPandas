@@ -69,55 +69,5 @@ class AmazonKerasClassifier(Model):
         super(AmazonKerasClassifier, self).fit(20, batch_size, validating=validating, generating=generating)
         self.compile(learn_rate * 0.1)
         super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
-        self.compile(learn_rate * 0.1)
+        self.compile(learn_rate * 0.01)
         super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
-'''def train_model(self, x_train, y_train, learn_rate=0.001, epoch=5, batch_size=128, validation_split_size=0.2, train_callbacks=()):
-                history = LossHistory()
-
-                X_train, X_valid, y_train, y_valid = train_test_split(x_train, y_train,
-                                                                      test_size=validation_split_size)
-
-
-
-                self.classifier.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
-
-
-                # early stopping will auto-stop training process if model stops learning after 3 epochs
-                earlyStopping = EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
-
-                self.classifier.fit(X_train, y_train,
-                                    batch_size=batch_size,
-                                    epochs=epoch,
-                                    verbose=1,
-                                    validation_data=(X_valid, y_valid),
-                                    callbacks=[history, *train_callbacks, earlyStopping])
-                fbeta_score = self._get_fbeta_score(self.classifier, X_valid, y_valid)
-                return [history.train_losses, history.val_losses, fbeta_score]
-
-            def save_weights(self, weight_file_path):
-                self.classifier.save_weights(weight_file_path)
-
-            def load_weights(self, weight_file_path):
-                self.classifier.load_weights(weight_file_path)
-
-            def predict(self, x_test):
-                predictions = self.classifier.predict(x_test)
-                return predictions
-
-            def map_predictions(self, predictions, labels_map, thresholds):
-                """
-                Return the predictions mapped to their labels
-                :param predictions: the predictions from the predict() method
-                :param labels_map: the map
-                :param thresholds: The threshold of each class to be considered as existing or not existing
-                :return: the predictions list mapped to their labels
-                """
-                predictions_labels = []
-                for prediction in predictions:
-                    labels = [labels_map[i] for i, value in enumerate(prediction) if value > thresholds[i]]
-                    predictions_labels.append(labels)
-
-                return predictions_labels
-
-            def close(self):
-                backend.clear_session()'''
