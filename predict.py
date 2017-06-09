@@ -89,18 +89,18 @@ if __name__ == "__main__":
 				p = args["data_proportion"]
 				list_imgs = random.sample(list_imgs, int(len(list_imgs) * args["data_proportion"]))
 			
-				testId = get_uniq_name()
-				predictionFile = "./predict/{d}-predict.csv".format(d=args["data"])
-				rawPredictionFile = "./predict/{d}-predict-raw.csv".format(d=args["data"])
-				os.makedirs(os.path.dirname(predictionFile), exist_ok=True)
+			testId = get_uniq_name()
+			predictionFile = "./predict/{d}-predict.csv".format(d=args["data"])
+			rawPredictionFile = "./predict/{d}-predict-raw.csv".format(d=args["data"])
+			os.makedirs(os.path.dirname(predictionFile), exist_ok=True)
 
-				with open(predictionFile, "w") as pred_f, open(rawPredictionFile, "w") as raw_pred_f:
-					pred_f.write("image_name,tags\n")
-					raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(labels)))
+			with open(predictionFile, "w") as pred_f, open(rawPredictionFile, "w") as raw_pred_f:
+				pred_f.write("image_name,tags\n")
+				raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(labels)))
 
-					for f_img, probas, tags in predict(list_imgs, data_dir, labels=labels, thresholds=thresholds):
-						raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
-						pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
+				for f_img, probas, tags in predict(list_imgs, data_dir, labels=labels, thresholds=thresholds):
+					raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
+					pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 
 			copyfile(predictionFile, "./predict/archive/{x}-{d}-predict.csv".format(x=testId, d=args["data"]))
 			copyfile(rawPredictionFile, "./predict/archive/{x}-{d}-predict-raw.csv".format(x=testId, d=args["data"]))
