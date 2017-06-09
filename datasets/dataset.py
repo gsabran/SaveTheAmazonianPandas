@@ -4,7 +4,6 @@ import os
 from tqdm import tqdm
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
-from skimage.io import imread
 from scipy.misc import imresize
 import numpy as np
 
@@ -32,10 +31,11 @@ class Dataset(object):
 		self.sessionId = sessionId
 
 		if training_files is None or validation_files is None or label_idx is None:
-			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio)))
+			labels_set = set(self.labels)
+			train_idx = set(random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio))))
 			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
 			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
-			label_idx = np.array([i for i, l in enumerate(LABELS) if l in self.labels])
+			label_idx = np.array([i for i, l in enumerate(LABELS) if l in labels_set])
 
 		self.training_files = training_files
 		self.validation_files = validation_files
@@ -43,7 +43,8 @@ class Dataset(object):
 		self.labels = np.array([LABELS[k] for k in label_idx])
 
 		self.outputs = {k: v[self.label_idx] for k, v in get_labels_dict().items()} # outputs might contain files that are unused
-		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in self.training_files}, self.labels)
+		training_files_set = set(self.training_files)
+		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in training_files_set}, self.labels)
 		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
 
 		self._write_sets()
