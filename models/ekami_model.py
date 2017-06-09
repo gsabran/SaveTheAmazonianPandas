@@ -64,7 +64,7 @@ class AmazonKerasClassifier(Model):
         p_valid = classifier.predict(X_valid)
         return fbeta_score(y_valid, np.array(p_valid) > 0.2, beta=2, average='samples')
 
-    def fit(self, n_epoch, batch_size, validating=True, generating=True, learn_rate=0.001):
+    def fit(self, n_epoch, batch_size, validating=True, generating=False, learn_rate=0.001):
         self.compile(learn_rate)
         super(AmazonKerasClassifier, self).fit(20, batch_size, validating=validating, generating=generating)
         self.compile(learn_rate * 0.1)

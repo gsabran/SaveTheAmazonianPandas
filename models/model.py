@@ -95,6 +95,7 @@ class Model(object):
 			callbacks.append(validationCheckpoint)
 
 		if generating:
+			print("Fitting with generated data")
 			return self.model.fit_generator(
 				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape),
 				int(len(self.data.training_files) / batch_size),
