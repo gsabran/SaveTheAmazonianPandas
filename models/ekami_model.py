@@ -12,7 +12,6 @@ from keras.optimizers import Adam
 from keras.callbacks import Callback, EarlyStopping
 from keras import backend
 
-from constants import NUM_TAGS, NUM_WEATHER
 from .model import Model
 
 class AmazonKerasClassifier(Model):
@@ -20,7 +19,7 @@ class AmazonKerasClassifier(Model):
         self.model = Sequential()
         self.add_conv_layer(self.img_size)
         self.add_flatten_layer()
-        self.add_ann_layer(NUM_WEATHER + NUM_TAGS)
+        self.add_ann_layer(len(self.data.labels))
 
     def add_conv_layer(self, img_size=(32, 32), img_channels=3):
         self.model.add(BatchNormalization(input_shape=(self.img_size[0], self.img_size[1], img_channels)))
@@ -54,7 +53,7 @@ class AmazonKerasClassifier(Model):
         self.model.add(Dense(512, activation='relu'))
         self.model.add(BatchNormalization())
         self.model.add(Dropout(0.5))
-        self.model.add(Dense(output_size, activation='sigmoid'))
+        self.model.add(Dense(output_size, activation='softmax'))
 
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)

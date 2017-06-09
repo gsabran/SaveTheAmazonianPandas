@@ -4,7 +4,6 @@ from keras.layers import GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout
 
 from .model import Model
-from constants import NUM_TAGS, NUM_WEATHER
 
 class XceptionCNN(Model):
 	"""
@@ -21,7 +20,7 @@ class XceptionCNN(Model):
 		x = Dense(85, activation='relu')(x)
 		x = Dropout(0.5)(x)
 		# and a logistic layer -- let's say we have 200 classes
-		predictions = Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid')(x)
+		predictions = Dense(len(self.data.labels), activation='sigmoid')(x)
 
 		# this is the model we will train
 		model = keras.models.Model(inputs=base_model.input, outputs=predictions)
