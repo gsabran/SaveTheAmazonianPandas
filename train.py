@@ -65,7 +65,7 @@ if __name__ == "__main__":
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(TRAIN_DATA_DIR))]
 		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args["data_proportion"]))
 
-		data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
+		# data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
 		data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")

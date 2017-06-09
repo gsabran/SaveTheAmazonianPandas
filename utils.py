@@ -6,6 +6,7 @@ import string
 import numpy as np
 from sklearn.metrics import fbeta_score
 from skimage.io import imread
+from skimage import color
 from scipy.misc import imresize
 import os
 import math
@@ -110,6 +111,7 @@ def get_resized_image(f, data_dir, image_data_fmt, input_shape):
 	Read the image from file and return it in the expected size
 	"""
 	img = imread(os.path.join(data_dir, "{}.jpg".format(f)))
+	img = color.rgb2hsv(img)
 	if image_data_fmt == "channels_first":
 		img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
 	return imresize(img, input_shape)
