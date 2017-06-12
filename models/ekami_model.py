@@ -17,52 +17,42 @@ from .model import Model
 
 class AmazonKerasClassifier(Model):
     def create_base_model(self):
-        self.model = Sequential()
-        self.add_conv_layer(self.img_size)
-        self.add_flatten_layer()
-        self.add_ann_layer(NUM_WEATHER + NUM_TAGS)
+        model = Sequential()
 
-    def add_conv_layer(self, img_size=(32, 32), img_channels=3):
-        self.model.add(BatchNormalization(input_shape=(self.img_size[0], self.img_size[1], img_channels)))
+        model.add(BatchNormalization(input_shape=self.input_shape))
 
-        self.model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
-        self.model.add(Conv2D(32, (3, 3), activation='relu'))
-        self.model.add(MaxPooling2D(pool_size=2))
-        self.model.add(Dropout(0.25))
+        # add conv layers
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=2))
+        model.add(Dropout(0.25))
 
-        self.model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        self.model.add(Conv2D(64, (3, 3), activation='relu'))
-        self.model.add(MaxPooling2D(pool_size=2))
-        self.model.add(Dropout(0.25))
+        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=2))
+        model.add(Dropout(0.25))
 
-        self.model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        self.model.add(Conv2D(128, (3, 3), activation='relu'))
-        self.model.add(MaxPooling2D(pool_size=2))
-        self.model.add(Dropout(0.25))
+        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=2))
+        model.add(Dropout(0.25))
 
-        self.model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
-        self.model.add(Conv2D(256, (3, 3), activation='relu'))
-        self.model.add(MaxPooling2D(pool_size=2))
-        self.model.add(Dropout(0.25))
+        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(256, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=2))
+        model.add(Dropout(0.25))
 
-
-    def add_flatten_layer(self):
-        self.model.add(Flatten())
-
-
-    def add_ann_layer(self, output_size):
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(BatchNormalization())
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(output_size, activation='sigmoid'))
+        # add dense layers
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.5))
+        model.add(Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid'))
+        self.model = model
 
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)
         self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
-
-    def _get_fbeta_score(self, model, X_valid, y_valid):
-        p_valid = classifier.predict(X_valid)
-        return fbeta_score(y_valid, np.array(p_valid) > 0.2, beta=2, average='samples')
 
     def fit(self, n_epoch, batch_size, validating=True, generating=True, learn_rate=0.001):
         self.compile(learn_rate)
