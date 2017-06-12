@@ -90,6 +90,16 @@ def get_labels_dict():
 			filename, rawTags = l.strip().split(",")
 			tags = rawTags.split(" ")
 			bool_tags = np.array([1 if tag in tags else 0 for tag in LABELS])
+			
+			# some rows are missing a label tag...
+			has_weather_tag = False
+			for i in WEATHER_IDX:
+				if bool_tags[i] == 1:
+					has_weather_tag = True
+					break
+			if not has_weather_tag:
+				bool_tags[LABELS.index("clear")] = 1
+
 			file = filename.split("/")[-1].split(".")[0]
 			labels_dict[file] = bool_tags
 	return labels_dict
