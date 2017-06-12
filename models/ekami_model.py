@@ -12,7 +12,6 @@ from keras.optimizers import Adam
 from keras.callbacks import Callback, EarlyStopping
 from keras import backend
 
-from constants import NUM_TAGS, NUM_WEATHER
 from .model import Model
 
 class AmazonKerasClassifier(Model):
@@ -47,8 +46,7 @@ class AmazonKerasClassifier(Model):
         model.add(Dense(512, activation='relu'))
         model.add(BatchNormalization())
         model.add(Dropout(0.5))
-        model.add(Dense(NUM_WEATHER + NUM_TAGS, activation='sigmoid'))
-        self.model = model
+        model.add(Dense(len(self.data.labels), activation='sigmoid'))
 
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)

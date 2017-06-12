@@ -1,4 +1,4 @@
-from dataset import Dataset
+from .dataset import Dataset
 from constants import LABELS, WEATHER_IDX
 
 class WeatherDataset(Dataset):

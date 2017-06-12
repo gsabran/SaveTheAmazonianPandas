@@ -4,7 +4,6 @@ import os
 from tqdm import tqdm
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
-from skimage.io import imread
 from scipy.misc import imresize
 import numpy as np
 
@@ -12,11 +11,15 @@ from constants import LABELS, TRAIN_DATA_DIR
 from utils import files_proba, files_and_cdf_from_proba, pick, get_labels_dict, get_resized_image
 
 class Dataset(object):
+	"""
+	The labels used by the dataset
+	"""
 	labels = LABELS
+
 	"""
 	A dataset that can be fed to a model
 	"""
-	def __init__(self, list_files, validation_ratio, sessionId=None, training_files=None, validation_files=None):
+	def __init__(self, list_files, validation_ratio=0, sessionId=None, training_files=None, validation_files=None, label_idx=None):
 		"""
 		list_files: the list of paths to all images that can be used
 		validation_ratio: the proportion of data to keep aside for model validation
@@ -24,19 +27,24 @@ class Dataset(object):
 		training_files: a list of paths to files that should be used for training
 		validation_files: a list of paths to files that should be used for validation
 		"""
-		self.outputs = get_labels_dict() # outputs might contain files that are unused
 		self.validation_ratio = validation_ratio
 		self.sessionId = sessionId
 
-		if training_files is None or validation_files is None:
-			train_idx = random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio)))
+		if training_files is None or validation_files is None or label_idx is None:
+			labels_set = set(self.labels)
+			train_idx = set(random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio))))
 			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
 			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
+			label_idx = np.array([i for i, l in enumerate(LABELS) if l in labels_set])
 
 		self.training_files = training_files
 		self.validation_files = validation_files
+		self.label_idx = label_idx
+		self.labels = np.array([LABELS[k] for k in label_idx])
 
-		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in self.training_files}, self.labels)
+		self.outputs = {k: v[self.label_idx] for k, v in get_labels_dict().items()} # outputs might contain files that are unused
+		training_files_set = set(self.training_files)
+		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in training_files_set}, self.labels)
 		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
 
 		self._write_sets()
@@ -95,12 +103,11 @@ class Dataset(object):
 		if self.sessionId is None:
 			return
 
-		with open('train/training-files.csv', 'w') as f:
-			f.write(','.join(self.training_files))
-		with open('train/validation-files.csv', 'w') as f:
-			f.write(','.join(self.validation_files))
-		copyfile('train/training-files.csv', 'train/archive/{f}-training-files.csv'.format(f=self.sessionId))
-		copyfile('train/validation-files.csv', 'train/archive/{f}-validation-files.csv'.format(f=self.sessionId))
+		for file, data in zip(["training-files", "validation-files", "dataset-labels"], [self.training_files, self.validation_files, [str(i) for i in self.label_idx]]):
+			filename = "train/{file}.csv".format(file=file)
+			with open(filename, "w") as f:
+				f.write(','.join(data))	
+			copyfile(filename, "train/archive/{id}-{file}.csv".format(id=self.sessionId, file=file))
 
 	def __xyData(self, image_data_fmt, isTraining, input_shape):
 		dataset = self.training_files if isTraining else self.validation_files
