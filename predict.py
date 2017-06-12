@@ -40,6 +40,7 @@ if __name__ == "__main__":
 		parser.add_argument('-b', '--batch-size', default=64, help='The size of the batch', type=int)
 		parser.add_argument('--data-proportion', default=1, help='A proportion of the data to use for training', type=float)
 		parser.add_argument('--cpu-only', default=False, help='Wether to only use CPU or not', type=bool)
+		parser.add_argument('--thresholds', default=None, help='A path to a csv representation of the thresholds to use', type=str)
 		args = vars(parser.parse_args())
 		print('args', args)
 
@@ -57,14 +58,19 @@ if __name__ == "__main__":
 			"""
 			First use validation data to find optimal thresholds to make tag predictions from proba
 			"""
-			print("Finding optimal thresholds...")
-			with open('train/validation-files.csv') as f_validation_files:
-				validation_files = f_validation_files.readline().split(",")
-				probas = np.array([p for f, p, t in predict(validation_files, TRAIN_DATA_DIR)])
-				labels = get_labels_dict()
-				true_tags = np.array([labels[img] for img in validation_files])
-				thresholds = optimise_f2_thresholds(true_tags, probas)
-				print("Optimal thresholds are", thresholds)
+			if args["thresholds"] is not None:
+				with open(args["thresholds"]) as f:
+					thresholds = [float(x) for x in f.readline().strip().split(",")]
+				print("Optimal thresholds loaded: {thresholds}".format(thresholds=thresholds))
+			else:
+				print("Finding optimal thresholds...")
+				with open('train/validation-files.csv') as f_validation_files:
+					validation_files = f_validation_files.readline().split(",")
+					probas = np.array([p for f, p, t in predict(validation_files, TRAIN_DATA_DIR)])
+					labels = get_labels_dict()
+					true_tags = np.array([labels[img] for img in validation_files])
+					thresholds = optimise_f2_thresholds(true_tags, probas)
+					print("Optimal thresholds are", thresholds)
 
 			data_dir = TRAIN_DATA_DIR if args["data"] == "train" else TEST_DATA_DIR
 			
