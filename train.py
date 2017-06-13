@@ -43,6 +43,7 @@ if __name__ == "__main__":
 		parser.add_argument("-c", "--cnn", default="", help='Which CNN to use. Can be "xception", "vgg16" or "ekami" or left blank for now.', type=str)
 		parser.add_argument("--data-proportion", default=1, help="A proportion of the data to use for training", type=float)
 		parser.add_argument("--generate-data", default=False, help="Wether to generate data or use the original dataset", type=bool)
+		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
 
 		args = vars(parser.parse_args())
 		print("args", args)
@@ -65,8 +66,10 @@ if __name__ == "__main__":
 		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(TRAIN_DATA_DIR))]
 		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args["data_proportion"]))
 
-		# data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
-		data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
+		if args["dataset"] == "weather":
+			data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
+		else:
+			data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
 			cnn = XceptionCNN(data, n_gpus=n_gpus)
