@@ -47,6 +47,7 @@ class AmazonKerasClassifier(Model):
         model.add(BatchNormalization())
         model.add(Dropout(0.5))
         model.add(Dense(len(self.data.labels), activation='sigmoid'))
+        self.model = model
 
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)
