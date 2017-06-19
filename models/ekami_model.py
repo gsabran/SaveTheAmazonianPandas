@@ -5,9 +5,10 @@ from sklearn.metrics import fbeta_score
 from sklearn.model_selection import train_test_split
 
 import keras as k
-from keras.models import Sequential
+from keras.models import Sequential, Model as md
 from keras.layers.core import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
+from keras.layers.merge import Concatenate
+from keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import Callback, EarlyStopping
 from keras import backend
@@ -16,37 +17,41 @@ from .model import Model
 
 class AmazonKerasClassifier(Model):
     def create_base_model(self):
-        model = Sequential()
+        print("self.input_shape", self.input_shape)
+        input1 = Input(shape=self.input_shape)
+        input2 = Input(shape=(10,))
 
-        model.add(BatchNormalization(input_shape=self.input_shape))
+        x = BatchNormalization(input_shape=self.input_shape)(input1)
 
         # add conv layers
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=2))
-        model.add(Dropout(0.25))
+        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
+        x = Conv2D(32, (3, 3), activation='relu')(x)
+        x = MaxPooling2D(pool_size=2)(x)
+        x = Dropout(0.25)(x)
 
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=2))
-        model.add(Dropout(0.25))
+        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)
+        x = Conv2D(64, (3, 3), activation='relu')(x)
+        x = MaxPooling2D(pool_size=2)(x)
+        x = Dropout(0.25)(x)
 
-        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(128, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=2))
-        model.add(Dropout(0.25))
+        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)
+        x = Conv2D(128, (3, 3), activation='relu')(x)
+        x = MaxPooling2D(pool_size=2)(x)
+        x = Dropout(0.25)(x)
 
-        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(256, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=2))
-        model.add(Dropout(0.25))
+        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)
+        x = Conv2D(256, (3, 3), activation='relu')(x)
+        x = MaxPooling2D(pool_size=2)(x)
+        x = Dropout(0.25)(x)
 
         # add dense layers
-        model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.5))
-        model.add(Dense(len(self.data.labels), activation='sigmoid'))
+        x = Flatten()(x)
+        x = Concatenate()([x, input2])
+        x = Dense(512, activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        x = Dense(len(self.data.labels), activation='sigmoid')(x)
+        model = md(inputs=[input1, input2], outputs=x)
         self.model = model
 
     def compile(self, learn_rate=0.001):
