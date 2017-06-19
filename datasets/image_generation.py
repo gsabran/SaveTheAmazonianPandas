@@ -16,7 +16,7 @@ import warnings
 import multiprocessing.pool
 from functools import partial
 
-from .. import backend as K
+from keras import backend as K
 
 try:
     from PIL import Image as pil_image
@@ -569,8 +569,11 @@ class ImageDataGenerator(object):
 
         transform_matrix = None
         if theta != 0:
-            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
-                                        [np.sin(theta), np.cos(theta), 0],
+            s = np.sin(theta)
+            c = np.cos(theta)
+            f = max(abs(c - s), abs(c + s))
+            rotation_matrix = np.array([[np.cos(theta) * f, -np.sin(theta) * f, 0],
+                                        [np.sin(theta) * f, np.cos(theta) * f, 0],
                                         [0, 0, 1]])
             transform_matrix = rotation_matrix
 
