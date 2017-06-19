@@ -30,3 +30,13 @@ python3 predict.py --model train/model.h5 --data test
 ```bash
 python3 predict.py --model train/model.h5 --data train
 ```
+
+## Attemps
+
+| f2 test | f2 validation | model | epochs | generationg data | other |
+|---|---|---|---|---|---|
+| 0.90862 | 0.9063 | ekami | 50 | no | early-stopping, auto LR decrease on accuracy |
+| 0.9105 | 0.8963 | ekami | 50 | no | early-stopping, auto LR decrease on f2 validation (might not work) |
+| 0.909 | 0.9075 | ekami | 50 | no | early-stopping, auto LR decrease on f2 validation |
+| 0.909 | 0.9075 | ekami | 50 | no | early-stopping, auto LR decrease on f2 validation |
+| 0.9205 | 0.9190 | ekami | 100 | no | early-stopping, auto LR decrease on f2 validation |
