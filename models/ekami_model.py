@@ -55,8 +55,4 @@ class AmazonKerasClassifier(Model):
 
     def fit(self, n_epoch, batch_size, validating=True, generating=False, learn_rate=0.001):
         self.compile(learn_rate)
-        super(AmazonKerasClassifier, self).fit(20, batch_size, validating=validating, generating=generating)
-        self.compile(learn_rate * 0.1)
-        super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
-        self.compile(learn_rate * 0.01)
-        super(AmazonKerasClassifier, self).fit(5, batch_size, validating=validating, generating=generating)
+        super(AmazonKerasClassifier, self).fit(n_epoch, batch_size, validating=validating, generating=generating)

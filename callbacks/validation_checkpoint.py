@@ -8,9 +8,11 @@ class ValidationCheckpoint(Callback):
 	- Parameter checkpoint_path: path to where the checkpoint of the best model should be saved
 	"""
 
-	def __init__(self, scoring, validation_input, validation_output, checkpoint_path, patience=1):
+	def __init__(self, scoring, training_input, training_output, validation_input, validation_output, checkpoint_path, patience=1):
 		super(ValidationCheckpoint, self).__init__()
 		self.scoring = scoring
+		self.training_input = training_input
+		self.training_output = training_output
 		self.validation_input = validation_input
 		self.validation_output = validation_output
 		self.best_score = 0
@@ -20,9 +22,14 @@ class ValidationCheckpoint(Callback):
 		self.checkpoint_path = checkpoint_path
 
 	def on_epoch_end(self, epoch, logs=None):
-		print("Scoring validation dataset...".format(epoch=epoch))
+		logs = logs if logs is not None else {}
+		print("\nScoring validation dataset...".format(epoch=epoch))
+		train_score = self.scoring(self.model, self.training_input, self.training_output)
+		logs["f2_train_score"] = train_score
 		score = self.scoring(self.model, self.validation_input, self.validation_output)
-		print("Validation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
+		print("\nValidation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
+		print("Traning score is {score}".format(score=train_score))
+		logs["f2_val_score"] = score
 		if score <= self.best_score:
 			self.remaining_patience -= 1
 			if self.remaining_patience == 0:

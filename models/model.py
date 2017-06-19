@@ -1,11 +1,13 @@
 import keras
 from keras import backend as K
-from keras.callbacks import CSVLogger, TensorBoard, ReduceLROnPlateau
+from keras.callbacks import CSVLogger, TensorBoard
 import numpy as np
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
 from constants import LABELS
-from validation_checkpoint import ValidationCheckpoint
+from callbacks.validation_checkpoint import ValidationCheckpoint
+from callbacks.logger import Logger
+from callbacks.reduce_lr_on_plateau import ReduceLROnPlateau
 from utils import get_predictions, get_inputs_shape, F2Score
 
 class Model(object):
@@ -64,19 +66,23 @@ class Model(object):
 		"""
 
 		print("Fitting on data of size", self.input_shape)
-
+		checkpoint_path = "train/checkpoint.hdf5"
 		csv_logger = CSVLogger('train/training.log')
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True, embeddings_freq=1)
 		learning_rate_reduction = ReduceLROnPlateau(
-			monitor='loss', 
-			patience=3, 
-			verbose=1, 
-			factor=0.5, 
-			min_lr=0.0001
+			model=self,
+			monitor='f2_val_score' if validating else 'acc',
+			patience=3,
+			verbose=1,
+			factor=0.5,
+			min_lr_factor=0.0001,
+			mode='max',
+			checkpoint_path=checkpoint_path if validating else None
 		)
-		callbacks = [csv_logger, tensorboard, learning_rate_reduction]
+		callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
 
 		if validating:
+			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(model, data_set, expectations):
@@ -90,17 +96,19 @@ class Model(object):
 
 			validationCheckpoint = ValidationCheckpoint(
 				scoring=score,
+				training_input=x_train,
+				training_output=y_train,
 				validation_input=x_validate,
 				validation_output=y_validate,
-				checkpoint_path="train/checkpoint.hdf5",
-				patience=5
+				checkpoint_path=checkpoint_path,
+				patience=10
 			)
-			callbacks.append(validationCheckpoint)
+			callbacks.insert(0, validationCheckpoint)
 
 		if generating:
 			print("Fitting with generated data")
 			return self.model.fit_generator(
-				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape),
+				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape, balancing=False),
 				int(len(self.data.training_files) / batch_size),
 				verbose=1,
 				callbacks=callbacks,
