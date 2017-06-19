@@ -67,6 +67,8 @@ class Dataset(object):
 			# rescale=None,
 			# preprocessing_function=None
 		)
+		self._cached_training_set = None
+		self._cached_validation_set = None
 
 	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True, augment=True):
 		"""
@@ -113,7 +115,7 @@ class Dataset(object):
 		dataset = self.training_files if isTraining else self.validation_files
 		Y = []
 		X = []
-		print("Reading inputs")
+		print("Reading inputs...")
 		with tqdm(total=len(dataset)) as pbar:
 			for f in dataset:
 				X.append(get_resized_image(f, TRAIN_DATA_DIR, image_data_fmt, input_shape))
@@ -126,10 +128,14 @@ class Dataset(object):
 		"""
 		The training set for a Keras model
 		"""
-		return self.__xyData(image_data_fmt, True, input_shape)
+		if self._cached_training_set is None:
+			self._cached_training_set = self.__xyData(image_data_fmt, True, input_shape)
+		return self._cached_training_set
 
 	def validationSet(self, image_data_fmt, input_shape):
 		"""
 		The validation set for a Keras model
 		"""
-		return self.__xyData(image_data_fmt, False, input_shape)
+		if self._cached_validation_set is None:
+			self._cached_validation_set = self.__xyData(image_data_fmt, False, input_shape)
+		return self._cached_validation_set
