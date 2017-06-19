@@ -43,7 +43,10 @@ def get_predictions(y, labels, thresholds=None):
 		"""
 		Make prediction on a row
 		"""
-		weather = [weather_idx[np.argmax(row[weather_idx])]] if len(weather_idx) > 1 else []
+		# weather = [weather_idx[np.argmax(row[weather_idx])]] if len(weather_idx) > 1 else []
+		weather = [i for i, v in enumerate(row) if i in weather_idx and v > thresholds[i]]
+		if len(weather) == 0:
+			weather = [weather_idx[np.argmax(row[weather_idx])]] if len(weather_idx) > 1 else []
 		tags = [i for i, v in enumerate(row) if i not in weather_idx and v > thresholds[i]]
 		return [LABELS[k] for k in weather + tags]
 
