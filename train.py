@@ -12,9 +12,11 @@ from models.exception import XceptionCNN
 from models.vgg16 import VGG16CNN
 from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
+from models.gui import GuiNet
 from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
 from datasets.weather_dataset import WeatherDataset
+from datasets.weather_in_input import WeatherInInputDataset
 
 directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -68,6 +70,8 @@ if __name__ == "__main__":
 
 		if args["dataset"] == "weather":
 			data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
+		elif args["dataset"] == "weatherInInput":
+			data = WeatherInInputDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
 		else:
 			data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId)
 		if args["cnn"] == "xception":
@@ -79,6 +83,9 @@ if __name__ == "__main__":
 		elif args["cnn"] == "ekami":
 			print("Using Ekami architecture")
 			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus)
+		elif args["cnn"] == "gui":
+			print("Using GuiNet architecture")
+			cnn = GuiNet(data, n_gpus=n_gpus)
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data, n_gpus=n_gpus)
