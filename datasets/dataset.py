@@ -35,12 +35,11 @@ class Dataset(object):
 		self.sessionId = sessionId
 
 		if training_files is None or validation_files is None:
-			labels_set = set(self.labels)
 			train_idx = set(random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio))))
 			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
 			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 		
-		label_idx = np.array([i for i, l in enumerate(LABELS) if l in labels_set])
+		label_idx = np.array([i for i, l in enumerate(LABELS) if l in self.labels])
 		self.training_files = training_files
 		self.validation_files = validation_files
 		self.label_idx = label_idx
@@ -79,31 +78,52 @@ class Dataset(object):
 		Generate batches fo size n, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
 		"""
+		input_length = self.input_length
 		files, cdf = self.files_and_cdf
 		data = self.trainingSet(image_data_fmt, input_shape)
+		if input_length == 1:
+			data[0] = [data[0]]
+
 		data_dict = {}
 		for i, f in enumerate(self.training_files):
 			if input_shape:
-				data_dict[f] = (imresize(data[0][i], input_shape), data[1][i])
+				data_dict[f] = (
+					[imresize(data[0][0][i], input_shape)] + [data[0][k + 1][i] for k in range(input_length - 1)],
+					data[1][i]
+				)
 			else:
-				data_dict[f] = (data[0][i], data[1][i])
+				data_dict[f] = (
+					[data[0][k][i] for k in range(input_length)],
+					data[1][i]
+				)
 		while True:
 			if balancing:
 				batch_files = pick(n, files, cdf)
 			else:
 				batch_files = random.sample(files, n)
 			outputs = np.array([data_dict[f][1] for f in batch_files])
-			inputs = np.array([data_dict[f][0] for f in batch_files])
+			inputs = [np.array([data_dict[f][0][k].astype(K.floatx()) for f in batch_files]) for k in range(input_length)]
 
-			batch_x = np.zeros(tuple([n] + list(inputs.shape)[1:]), dtype=K.floatx())
-			for i, inp in enumerate(inputs):
-				if augment:
-					x = self.image_data_generator.random_transform(inp.astype(K.floatx()))
-					x = self.image_data_generator.standardize(x)
-					batch_x[i] = x
+			if not augment:
+				if input_length == 1:
+					yield (inputs[0], outputs)
 				else:
-					batch_x[i] = inp.astype(K.floatx())
-			yield (batch_x, outputs)
+					yield (inputs, outputs)
+			else:
+				batch_x = [np.zeros(tuple([n] + list(inputs[k].shape)[1:]), dtype=K.floatx()) for k in range(input_length)]
+				for i in range(n):
+					for k in range(input_length):
+						batch_x[k][i] = inputs[k][i]
+
+				for i, inp in enumerate(inputs[0]):
+					x = self.image_data_generator.random_transform(inp)
+					x = self.image_data_generator.standardize(x)
+					batch_x[0][i] = x
+
+				if input_length == 1:
+					yield (batch_x[0], outputs)
+				else:
+					yield (batch_x, outputs)
 
 	def _write_sets(self):
 		if self.sessionId is None:

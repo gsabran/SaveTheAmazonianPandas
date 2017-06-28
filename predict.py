@@ -83,7 +83,6 @@ if __name__ == "__main__":
 		print("Predicting for dataset {ds} with labels {labels}".format(ds=args["dataset"], labels=labels))
 
 		cnn = SimpleCNN(data, model=load_model(args["model"]), n_gpus=-1 if args["cpu_only"] else 0)
-		print("data", data.trainingSet(cnn.image_data_fmt, cnn.input_shape))
 
 		image_data_fmt, input_shape, _ = get_inputs_shape()
 		if args["file"] != "":
