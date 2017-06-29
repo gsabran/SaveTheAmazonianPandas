@@ -42,4 +42,6 @@ python3 predict.py --model train/model.h5 --data train
 | 0.9205 | 0.9190 | ekami | 100 | no | early-stopping, auto LR decrease on f2 validation |
 | 0.9205 | 0.9192 | ekami | 100 | no | early-stopping, auto LR decrease on f2 validation gaussian white noise |
 | 0.91312 | 0.9156 | ekami | 100 | no | same, full size images |
+| _ | 0.94 | ekami | 100 | no | truth used in final weather labels |
+| _ | 0.946 | gui | 100 | no | true weather used in dense layer |
 
