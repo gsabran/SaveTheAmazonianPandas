@@ -14,11 +14,12 @@ from keras.callbacks import Callback, EarlyStopping
 from keras import backend
 
 from .model import Model
+from .constants import NUM_WEATHER
 
 class GuiNet(Model):
     def create_base_model(self):
         input1 = Input(shape=self.input_shape)
-        input2 = Input(shape=(4,))
+        input2 = Input(shape=(NUM_WEATHER,))
 
         x = BatchNormalization(input_shape=self.input_shape)(input1)
 
