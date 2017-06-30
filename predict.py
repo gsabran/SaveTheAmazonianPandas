@@ -11,6 +11,7 @@ from models.simple_cnn import SimpleCNN
 from train import TRAINED_MODEL
 from constants import LABELS, TRAIN_DATA_DIR, TEST_DATA_DIR
 from datasets.dataset import Dataset
+from datasets.weather_dataset import WeatherDataset, FilteredDataset
 from datasets.weather_in_input import WeatherInInputDataset
 
 def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LABELS, input_length=1, thresholds=None, batch_size=64):
@@ -76,8 +77,11 @@ if __name__ == "__main__":
 			data = WeatherDataset([], training_files=training_files, validation_files=validation_files)
 		elif args["dataset"] == "weatherInInput":
 			data = WeatherInInputDataset([], training_files=training_files, validation_files=validation_files)
+		elif args["dataset"] != "":
+			data = FilteredDataset(list_imgs, args["dataset"], VALIDATION_RATIO, sessionId=sessionId)
 		else:
 			data = Dataset([], training_files=training_files, validation_files=validation_files)
+
 		labels = data.labels
 		label_idx = data.label_idx
 		print("Predicting for dataset {ds} with labels {labels}".format(ds=args["dataset"], labels=labels))

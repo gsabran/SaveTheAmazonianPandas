@@ -17,11 +17,9 @@ from .model import Model
 
 class AmazonKerasClassifier(Model):
     def create_base_model(self):
-        print("self.input_shape", self.input_shape)
-        input1 = Input(shape=self.input_shape)
-        input2 = Input(shape=(10,))
+        inp = Input(shape=self.input_shape)
 
-        x = BatchNormalization(input_shape=self.input_shape)(input1)
+        x = BatchNormalization(input_shape=self.input_shape)(inp)
 
         # add conv layers
         x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
@@ -46,12 +44,11 @@ class AmazonKerasClassifier(Model):
 
         # add dense layers
         x = Flatten()(x)
-        x = Concatenate()([x, input2])
         x = Dense(512, activation='relu')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
-        x = Dense(len(self.data.labels), activation='sigmoid')(x)
-        model = md(inputs=[input1, input2], outputs=x)
+        x = Dense(len(self.data.labels), activation='softmax')(x)
+        model = md(inputs=inp, outputs=x)
         self.model = model
 
     def compile(self, learn_rate=0.001):

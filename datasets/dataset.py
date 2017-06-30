@@ -34,18 +34,21 @@ class Dataset(object):
 		self.validation_ratio = validation_ratio
 		self.sessionId = sessionId
 
+		label_idx = np.array([i for i, l in enumerate(LABELS) if l in self.labels])
+		self.label_idx = label_idx
+		self.labels = np.array([LABELS[k] for k in label_idx])
+
+		self.outputs = {k: v[self.label_idx] for k, v in get_labels_dict().items()} # outputs might contain files that are unused
+
+		list_files = self.select_files(list_files)
 		if training_files is None or validation_files is None:
 			train_idx = set(random.sample(range(len(list_files)), int(len(list_files) * (1 - self.validation_ratio))))
 			training_files = [f for i, f in enumerate(list_files) if i in train_idx]
 			validation_files = [f for i, f in enumerate(list_files) if i not in train_idx]
 		
-		label_idx = np.array([i for i, l in enumerate(LABELS) if l in self.labels])
 		self.training_files = training_files
 		self.validation_files = validation_files
-		self.label_idx = label_idx
-		self.labels = np.array([LABELS[k] for k in label_idx])
 
-		self.outputs = {k: v[self.label_idx] for k, v in get_labels_dict().items()} # outputs might contain files that are unused
 		training_files_set = set(self.training_files)
 		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in training_files_set}, self.labels)
 		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
@@ -72,6 +75,12 @@ class Dataset(object):
 		)
 		self._cached_training_set = None
 		self._cached_validation_set = None
+
+	def select_files(self, list_files):
+		"""
+		Select files that can be part of the dataset
+		"""
+		return list_files
 
 	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True, augment=True):
 		"""

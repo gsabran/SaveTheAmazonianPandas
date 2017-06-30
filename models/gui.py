@@ -14,47 +14,64 @@ from keras.callbacks import Callback, EarlyStopping
 from keras import backend
 
 from .model import Model
-from .constants import NUM_WEATHER
+from constants import NUM_WEATHER
+from layers.dot_average import WeightedAverage
 
 class GuiNet(Model):
+    def __init__(self, weather_model, data, model=None, n_gpus=-1):
+        # self.weather_model = weather_model
+        super(GuiNet, self).__init__(data, model=model, n_gpus=n_gpus)
+
+    # def _create_submodel(self, inp, i):
+    #     # add conv layers
+    #     x = BatchNormalization(input_shape=self.input_shape, name="batch_1_{i}".format(i=i))(inp)
+
+    #     x = Conv2D(32, (3, 3), padding='same', activation='relu', name="conv_1.1_{i}".format(i=i))(x)
+    #     x = Conv2D(32, (3, 3), activation='relu', name="conv_1.2_{i}".format(i=i))(x)
+    #     x = MaxPooling2D(pool_size=2, name="pool_1_{i}".format(i=i))(x)
+    #     x = Dropout(0.25, name="drop_1_{i}".format(i=i))(x)
+
+    #     x = Conv2D(64, (3, 3), padding='same', activation='relu', name="conv_2.1_{i}".format(i=i))(x)
+    #     x = Conv2D(64, (3, 3), activation='relu', name="conv_2.2_{i}".format(i=i))(x)
+    #     x = MaxPooling2D(pool_size=2, name="pool_2_{i}".format(i=i))(x)
+    #     x = Dropout(0.25, name="drop_2_{i}".format(i=i))(x)
+
+    #     x = Conv2D(128, (3, 3), padding='same', activation='relu', name="conv_3.1_{i}".format(i=i))(x)
+    #     x = Conv2D(128, (3, 3), activation='relu', name="conv_3.2_{i}".format(i=i))(x)
+    #     x = MaxPooling2D(pool_size=2, name="pool_3_{i}".format(i=i))(x)
+    #     x = Dropout(0.25, name="drop_3_{i}".format(i=i))(x)
+
+    #     x = Conv2D(256, (3, 3), padding='same', activation='relu', name="conv_4.1_{i}".format(i=i))(x)
+    #     x = Conv2D(256, (3, 3), activation='relu', name="conv_4.2_{i}".format(i=i))(x)
+    #     x = MaxPooling2D(pool_size=2, name="pool_4_{i}".format(i=i))(x)
+    #     x = Dropout(0.25, name="drop_4_{i}".format(i=i))(x)
+
+    #     # add dense layers
+    #     x = Flatten(name="flatten_{i}".format(i=i))(x)
+    #     x = Dense(512, activation='relu', name="dense_1_{i}".format(i=i))(x)
+    #     x = BatchNormalization(name="batch_2_{i}".format(i=i))(x)
+    #     x = Dropout(0.5, name="drop_5_{i}".format(i=i))(x)
+    #     return Dense(len(self.data.labels), activation='sigmoid', name="dense_2_{i}".format(i=i))(x)
+
     def create_base_model(self):
+        print("self.input_shape", self.input_shape)
         input1 = Input(shape=self.input_shape)
-        input2 = Input(shape=(NUM_WEATHER,))
+        # input2 = Input(shape=(4,))
 
-        x = BatchNormalization(input_shape=self.input_shape)(input1)
+        # submodels = [self._create_submodel(input1, i) for i in range(1)]
 
-        model = Sequential()
-
-        # add conv layers
-        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(32, (3, 3), activation='relu')(x)
-        x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
-
-        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(64, (3, 3), activation='relu')(x)
-        x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
-
-        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(128, (3, 3), activation='relu')(x)
-        x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
-
-        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(256, (3, 3), activation='relu')(x)
-        x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
-
-
-        # add dense layers
-        x = Flatten()(x)
-        x = Concatenate()([x, input2])
-        x = Dense(512, activation='relu')(x)
-        x = BatchNormalization()(x)
-        x = Dropout(0.5)(x)
-        x = Dense(len(self.data.labels), activation='sigmoid')(x)
-        model = KerasModel(inputs=[input1, input2], outputs=x)
+        # print("submodels", submodels[0].shape, self.weather_model.output.shape, input2.shape)
+        # print("submodels", submodels[0].shape, input2.shape)
+        # x = WeightedAverage(name="weightAverage")(submodels, weights=self.weather_model.output)
+        # x = WeightedAverage(name="weightAverage")(submodels, weights=input2)
+        # x = Concatenate()([submodels[0], input2])
+        # x = Concatenate()(submodels)
+        x = Flatten(name="flatten")(input1)
+        x = Dense(len(self.data.labels), activation='sigmoid', name="dense_222")(x)
+        print("model shape", x.shape)
+        # x = WeightedAverage()(submodels)
+        # model = KerasModel(inputs=[input1, input2], outputs=x)
+        model = KerasModel(inputs=input1, outputs=x)
 
         self.model = model
 
@@ -63,5 +80,8 @@ class GuiNet(Model):
         self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
     def fit(self, n_epoch, batch_size, validating=True, generating=False, learn_rate=0.001):
+        # for layer in self.weather_model.layers:
+        #     layer.trainable = False
         self.compile(learn_rate)
+        print("batch_size", batch_size)
         super(GuiNet, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
