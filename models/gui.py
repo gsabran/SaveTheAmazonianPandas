@@ -59,7 +59,7 @@ class GuiNet(Model):
 
         print("submodels", submodels[0].shape, self.weather_model.output)
         x = Concatenate()(submodels)
-        x = weighted_average(inputs=submodels, weights=self.weather_model.output)
+        x = weighted_average(inputs=submodels, weights=self.weather_model(input1))
         x = Dense(len(self.data.labels), activation='sigmoid')(x)
         model = KerasModel(inputs=input1, outputs=x)
 

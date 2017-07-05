@@ -2,7 +2,6 @@ import keras
 import numpy as np
 from keras.layers import *
 from keras.layers.merge import *
-from keras.models import Model
 
 
 """Layer that computes a mean between samples in two tensors according to weights computed in another vector.
@@ -12,7 +11,7 @@ where each entry `i` will be the dot product between
 `sum(a_j[i] * b[j], j)`.
 """
 
-def weighted_average(inputs,weights,name="weighted average"):
+def weighted_average(inputs,weights,name="weighted_average"):
     if (len(weights.get_shape())!=2):
         raise ValueError('Shape error in weighted_average')
     if (len(inputs)!= weights.get_shape()[1]):
@@ -26,6 +25,7 @@ def weighted_average(inputs,weights,name="weighted average"):
 
     for inp in inputs:
         reshaped_inputs.append(Reshape((1,-1))(inp))
+    print(reshaped_inputs)
     average=concatenate(reshaped_inputs,axis=1)
     result=Dot(axes=0)([average,weights])
     reshaped_result=Reshape(target_shape=input_shape[1:],name=name)(result)
