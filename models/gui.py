@@ -15,8 +15,7 @@ from keras import backend
 
 from .model import Model
 from constants import NUM_WEATHER
-from layers.dot_average import WeightedAverage
-
+from layers.weighted_average import *
 class GuiNet(Model):
     def __init__(self, weather_model, data, model=None, n_gpus=-1):
         self.weather_model = weather_model
@@ -60,7 +59,7 @@ class GuiNet(Model):
 
         print("submodels", submodels[0].shape, self.weather_model.output)
         x = Concatenate()(submodels)
-        x = WeightedAverage(name="weightAverage")(submodels, weights=self.weather_model.output)
+        x = weighted_average(inputs=submodels, weights=self.weather_model.output)
         x = Dense(len(self.data.labels), activation='sigmoid')(x)
         model = KerasModel(inputs=input1, outputs=x)
 
