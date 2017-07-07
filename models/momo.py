@@ -28,30 +28,30 @@ class MomoWeatherNet(Model):
 
         # add conv layers
         x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)+x
+        x = add([Conv2D(32, (3, 3), padding='same', activation='relu')(x),x])
+        x = add(Conv2D(32, (3, 3), padding='same', activation='relu')(x),x])
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
-        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
+        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
-        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
+        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
 
-        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
+        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
+        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
 
@@ -59,10 +59,12 @@ class MomoWeatherNet(Model):
         x = Flatten()(x)
         x = Dense(512, activation='relu')(x)
         x = BatchNormalization()(x)
+        x=Dense(256,activation='relu')(x)
         x = Dropout(0.5)(x)
         x = Dense(len(self.data.labels), activation='softmax')(x)
         model = KerasModel(inputs=inp, outputs=x)
         self.model = model
+
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)
         self.model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
