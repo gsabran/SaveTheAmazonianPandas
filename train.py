@@ -13,6 +13,7 @@ from models.vgg16 import VGG16CNN
 from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
 from models.gui import GuiNet
+from models.momo import MomoWeatherNet
 from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
 from datasets.weather_dataset import WeatherDataset, FilteredDataset
@@ -102,6 +103,9 @@ if __name__ == "__main__":
 			print("Using GuiNet architecture")
 			weather_model = load_model(args["helper_model"])
 			cnn = GuiNet(weather_model, data, n_gpus=n_gpus)
+		elif args["cnn"] == "momo":
+			print("Using MomoWeatherNet architecture")
+			cnn = MomoWeatherNet(data, n_gpus=n_gpus)
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data, n_gpus=n_gpus)
