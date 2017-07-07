@@ -77,7 +77,7 @@ if __name__ == "__main__":
 			data = WeatherDataset([], training_files=training_files, validation_files=validation_files)
 		elif args["dataset"] == "weatherInInput":
 			data = WeatherInInputDataset([], training_files=training_files, validation_files=validation_files)
-		elif args["dataset"] != "":
+		elif args["dataset"] != "" and args["dataset"] is not None:
 			data = FilteredDataset(list_imgs, args["dataset"], VALIDATION_RATIO, sessionId=sessionId)
 		else:
 			data = Dataset([], training_files=training_files, validation_files=validation_files)

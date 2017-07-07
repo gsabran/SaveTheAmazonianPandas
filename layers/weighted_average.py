@@ -25,7 +25,6 @@ def weighted_average(inputs,weights,name="weighted_average"):
 
     for inp in inputs:
         reshaped_inputs.append(Reshape((1,-1))(inp))
-    print(reshaped_inputs)
     average=concatenate(reshaped_inputs,axis=1)
     result=Dot(axes=0)([average,weights])
     reshaped_result=Reshape(target_shape=input_shape[1:],name=name)(result)

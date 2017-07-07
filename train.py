@@ -38,7 +38,7 @@ if __name__ == "__main__":
 		parser = argparse.ArgumentParser(description="train model")
 		parser.add_argument("-e", "--epochs", default=10, help="the number of epochs for fitting", type=int)
 		parser.add_argument("-b", "--batch-size", default=24, help="the number items per training batch", type=int)
-		parser.add_argument("--validation-ratio", default=0.0, help="the proportion of labeled input kept aside of training for validation", type=float)
+		parser.add_argument("--validation-ratio", default=0.1, help="the proportion of labeled input kept aside of training for validation", type=float)
 		parser.add_argument("-g", "--gpu", default=MAX_NUMBER_OF_GPUS, help="the number of gpu to use", type=int)
 		parser.add_argument("--cpu-only", default=False, help="Wether to only use CPU or not", type=bool)
 		parser.add_argument("-m", "--model", default="", help="A pre-built model to load", type=str)
