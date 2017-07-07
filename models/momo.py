@@ -19,7 +19,6 @@ from constants import NUM_WEATHER
 
 class MomoWeatherNet(Model):
     def __init__(self, data, model=None, n_gpus=-1):
-        self.weather_model = weather_model
         super(MomoWeatherNet, self).__init__(data, model=model, n_gpus=n_gpus)
 
     def create_base_model(self):
@@ -29,22 +28,22 @@ class MomoWeatherNet(Model):
 
         # add conv layers
         x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
-        x = Conv2D(32, (3, 3), activation='relu')(x)+x
-        x = Conv2D(32, (3, 3), activation='relu')(x)+x
+        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)+x
+        x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)+x
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
         x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(64, (3, 3), activation='relu')(x)+x
-        x = Conv2D(64, (3, 3), activation='relu')(x)+x
+        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
+        x = Conv2D(64, (3, 3), padding='same', activation='relu')(x)+x
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
         x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(128, (3, 3), activation='relu')(x)+x
-        x = Conv2D(128, (3, 3), activation='relu')(x)+x
+        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
+        x = Conv2D(128, (3, 3), padding='same', activation='relu')(x)+x
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
         x=concatenate([x,x])
