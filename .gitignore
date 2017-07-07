@@ -12,3 +12,5 @@ train-jpg-sample/*
 sftp-config.json
 .ipynb_checkpoints/*
 *.out
+backups/*
+

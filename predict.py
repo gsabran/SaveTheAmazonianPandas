@@ -11,22 +11,43 @@ from models.simple_cnn import SimpleCNN
 from train import TRAINED_MODEL
 from constants import LABELS, TRAIN_DATA_DIR, TEST_DATA_DIR
 from datasets.dataset import Dataset
+from datasets.weather_dataset import WeatherDataset, FilteredDataset
+from datasets.weather_in_input import WeatherInInputDataset
 
-def predict(image_files, data_dir, labels=LABELS, thresholds=None, batch_size=64):
+def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LABELS, input_length=1, thresholds=None, batch_size=64):
 	"""
 	Yield tuples of predictions as (image_name, probas, tags)
+	-Parameter model: the model to use to make predictions
+	-Parameter image_files: a list of file names
+	-Parameter data_dir: the directory where images are located
+	-Parameter labels: the list of labels to predict
+	-Parameter input_length: the number of different inputs provided to the model
+	-Parameter thresholds: thresholds to use to make predictions
 	"""
 
 	print("Starting predictions...")
-	imgs = []
+	inputs = []
+	if input_length != 1:
+		inputs = [[] for i in range(input_length)]
 	with tqdm(total=len(image_files)) as pbar:
 		for f in image_files:
-			imgs .append(get_resized_image(f, data_dir, image_data_fmt, input_shape))
+			img_input = model.data.get_input(f, data_dir, image_data_fmt, input_shape)
+			if input_length != 1:
+				for i in range(input_length):
+					inputs[i].append(img_input[i])
+			else:
+				inputs.append(img_input)
 			pbar.update(1)
-	imgs = np.array(imgs)
+
+	if input_length != 1:
+		for i in range(input_length):
+			inputs[i] = np.array(inputs[i])
+	else:
+		inputs = np.array(inputs)
+
 	with tqdm(total=len(image_files)) as pbar:
 		# larger batch size (relatively to the number of GPU) run out of memory
-		proba_predictions = cnn.model.predict(imgs, batch_size=batch_size, verbose=1)
+		proba_predictions = model.model.predict(inputs, batch_size=batch_size, verbose=1)
 		tag_predictions = get_predictions(proba_predictions, labels, thresholds)
 		for f_img, probas, tags in zip(image_files, proba_predictions, tag_predictions):
 			yield (f_img, probas, tags)
@@ -43,19 +64,29 @@ if __name__ == "__main__":
 		parser.add_argument("--data-proportion", default=1, help="A proportion of the data to use for training", type=float)
 		parser.add_argument("--cpu-only", default=False, help="Wether to only use CPU or not", type=bool)
 		parser.add_argument("--thresholds", default=None, help="A path to a csv representation of the thresholds to use", type=str)
+		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
 		args = vars(parser.parse_args())
 		print("args", args)
 
-		# it'd be better to load the correct class since implementations
-		# of functions such as parallelize might differ
-		with open("train/dataset-labels.csv") as f:
-			label_idx = np.array([int(i) for i in f.readline().split(",")])
-		data = Dataset([], training_files="train/training-files.csv", validation_files="train/validation-files.csv", label_idx=label_idx)
-		cnn = SimpleCNN(data, model=load_model(args["model"]), n_gpus=-1 if args["cpu_only"] else 0)
+		with open("train/training-files.csv") as f_training_files, open("train/validation-files.csv") as f_validation_files:
+			training_files = f_training_files.readline().split(",")
+			validation_files = f_validation_files.readline().split(",")
+		
 
-		with open("train/dataset-labels.csv") as f_labels:
-			labels = [LABELS[int(i)] for i in f_labels.readline().split(",")]
-		print("Predicting for {labels}".format(labels=labels))
+		if args["dataset"] == "weather":
+			data = WeatherDataset([], training_files=training_files, validation_files=validation_files)
+		elif args["dataset"] == "weatherInInput":
+			data = WeatherInInputDataset([], training_files=training_files, validation_files=validation_files)
+		elif args["dataset"] != "" and args["dataset"] is not None:
+			data = FilteredDataset(list_imgs, args["dataset"], VALIDATION_RATIO, sessionId=sessionId)
+		else:
+			data = Dataset([], training_files=training_files, validation_files=validation_files)
+
+		labels = data.labels
+		label_idx = data.label_idx
+		print("Predicting for dataset {ds} with labels {labels}".format(ds=args["dataset"], labels=labels))
+
+		cnn = SimpleCNN(data, model=load_model(args["model"]), n_gpus=-1 if args["cpu_only"] else 0)
 
 		image_data_fmt, input_shape, _ = get_inputs_shape()
 		if args["file"] != "":
@@ -74,7 +105,7 @@ if __name__ == "__main__":
 				print("Finding optimal thresholds...")
 				with open("train/validation-files.csv") as f_validation_files:
 					validation_files = f_validation_files.readline().split(",")
-					probas = np.array([p for f, p, t in predict(validation_files, TRAIN_DATA_DIR)])
+					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length)])
 					predicted_labels = get_labels_dict()
 					true_tags = [predicted_labels[img] for img in validation_files]
 					true_tags = np.array([[x for i, x in enumerate(l) if i in label_idx] for l in true_tags]) # filter to only keep labels of interest
@@ -104,7 +135,7 @@ if __name__ == "__main__":
 				pred_f.write("image_name,tags\n")
 				raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(labels)))
 
-				for f_img, probas, tags in predict(list_imgs, data_dir, labels=labels, thresholds=thresholds):
+				for f_img, probas, tags in predict(cnn, list_imgs, data_dir, image_data_fmt, input_shape, labels=labels, thresholds=thresholds, input_length=data.input_length):
 					raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
 					pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 
