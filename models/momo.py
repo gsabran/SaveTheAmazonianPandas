@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import keras as k
 from keras.models import Sequential, Model as KerasModel
 from keras.layers.core import Dense, Dropout, Flatten
-from keras.layers.merge import Concatenate
+from keras.layers.merge import *
 from keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import Callback, EarlyStopping
@@ -50,8 +50,8 @@ class MomoWeatherNet(Model):
 
 
         x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
-        x = Conv2D(256, (3, 3), activation='relu')(x)+x
-        x = Conv2D(256, (3, 3), activation='relu')(x)+x
+        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
+        x = Conv2D(256, (3, 3), padding='same', activation='relu')(x)+x
         x = MaxPooling2D(pool_size=2)(x)
         x = Dropout(0.25)(x)
 
@@ -61,13 +61,8 @@ class MomoWeatherNet(Model):
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
         x = Dense(len(self.data.labels), activation='softmax')(x)
-        model = md(inputs=inp, outputs=x)
+        model = KerasModel(inputs=inp, outputs=x)
         self.model = model
-
-        model = KerasModel(inputs=input1, outputs=x)
-
-        self.model = model
-
     def compile(self, learn_rate=0.001):
         opt = Adam(lr=learn_rate)
         self.model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
