@@ -177,4 +177,4 @@ class Dataset(object):
 		"""
 		Return the input corresponding to one image file
 		"""
-		return get_resized_image(image_name, data_dir, image_data_fmt, input_shape)
+		return get_resized_image(image_name, data_dir, image_data_fmt, input_shape) / 255.0
