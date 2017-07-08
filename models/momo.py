@@ -9,6 +9,7 @@ from keras.models import Sequential, Model as KerasModel
 from keras.layers.core import Dense, Dropout, Flatten
 from keras.layers.merge import *
 from keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization
+from layers.custom_layers import *
 from keras.optimizers import Adam
 from keras.callbacks import Callback, EarlyStopping
 from keras import backend
@@ -18,8 +19,9 @@ from constants import NUM_WEATHER
 
 
 class MomoWeatherNet(Model):
-    def __init__(self, data, model=None, n_gpus=-1):
+    def __init__(self, data, model=None, n_gpus=-1,trainable=True):
         super(MomoWeatherNet, self).__init__(data, model=model, n_gpus=n_gpus)
+        this.trainable=trainable
 
     def create_base_model(self):
         inp = Input(shape=self.input_shape)
@@ -28,32 +30,31 @@ class MomoWeatherNet(Model):
 
         # add conv layers
         x = Conv2D(32, (3, 3), padding='same', activation='relu')(x)
-        x = add([Conv2D(32, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(32, (3, 3), padding='same', activation='relu')(x),x])
+        x= residual_convolution(x,(3,3),32,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),32,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),32,trainable=self.trainable)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
+        x=concatenate([x,x])
+        
+        x= residual_convolution(x,(3,3),64,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),64,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),64,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),64,trainable=self.trainable)
+        x = MaxPooling2D(pool_size=2)(x)
         x=concatenate([x,x])
 
-        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(64, (3, 3), padding='same', activation='relu')(x),x])
+        x= residual_convolution(x,(3,3),128,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),128,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),128,trainable=self.trainable)
+        x= residual_convolution(x,(3,3),128,trainable=self.trainable)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
-        x=concatenate([x,x])
-
-        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(128, (3, 3), padding='same', activation='relu')(x),x])
-        x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
         x=concatenate([x,x])
 
 
-        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
-        x = add([Conv2D(256, (3, 3), padding='same', activation='relu')(x),x])
+        x = x= residual_convolution(x,(3,3),256,trainable=self.trainable)
+        x = x= residual_convolution(x,(3,3),256,trainable=self.trainable)
+        x = x= residual_convolution(x,(3,3),256,trainable=self.trainable)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Dropout(0.25)(x)
 
         # add dense layers  
         x = Flatten()(x)

@@ -30,3 +30,6 @@ def weighted_average(inputs,weights,name="weighted_average"):
     result=Dot(axes=0)([average,weights])
     reshaped_result=Reshape(target_shape=input_shape[1:],name=name)(result)
     return reshaped_result
+
+def residual_convolution(input,kernel_shape,depth,activation="relu",trainable=True):
+    return add([Conv2D(depth, kernel_shape, padding='same', activation=activation)(x),x])
