@@ -117,6 +117,7 @@ class Model(object):
 				epochs=n_epoch
 			)
 		else:
+			print("Fitting with no generated data")
 			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			return self.model.fit(x_train, y_train,
 				batch_size=batch_size,
