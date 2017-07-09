@@ -88,7 +88,7 @@ class Model(object):
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(model, data_set, expectations):
-				if test_time_augmentation:
+				if (self.test_time_augmentation):
 					rawPredictions = model.predict(data_set, verbose=1)
 					rawPredictions += model.predict(rotate_images(data_set,90), verbose=1)
 					rawPredictions += model.predict(rotate_images(data_set,180), verbose=1)
