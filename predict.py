@@ -73,6 +73,7 @@ if __name__ == "__main__":
 		parser.add_argument("--cpu-only", default=False, help="Wether to only use CPU or not", type=bool)
 		parser.add_argument("--thresholds", default=None, help="A path to a csv representation of the thresholds to use", type=str)
 		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
+		parser.add_argument("--tta", default=False, help="Test time augmentation", type=bool)
 		args = vars(parser.parse_args())
 		print("args", args)
 
@@ -113,7 +114,7 @@ if __name__ == "__main__":
 				print("Finding optimal thresholds...")
 				with open("train/validation-files.csv") as f_validation_files:
 					validation_files = f_validation_files.readline().split(",")
-					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length)])
+					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length,test_time_augmentation=args['tta']) ])
 					predicted_labels = get_labels_dict()
 					true_tags = [predicted_labels[img] for img in validation_files]
 					true_tags = np.array([[x for i, x in enumerate(l) if i in label_idx] for l in true_tags]) # filter to only keep labels of interest
@@ -143,7 +144,7 @@ if __name__ == "__main__":
 				pred_f.write("image_name,tags\n")
 				raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(labels)))
 
-				for f_img, probas, tags in predict(cnn, list_imgs, data_dir, image_data_fmt, input_shape, labels=labels, thresholds=thresholds, input_length=data.input_length):
+				for f_img, probas, tags in predict(cnn, list_imgs, data_dir, image_data_fmt, input_shape, labels=labels, thresholds=thresholds, input_length=data.input_length,test_time_augmentation=args['tta']):
 					raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
 					pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 
