@@ -8,6 +8,7 @@ from sklearn.metrics import fbeta_score
 from skimage.io import imread
 from skimage import color
 from scipy.misc import imresize
+from scipy.ndimage.interpolation import rotate 
 import os
 import math
 from keras import backend as K
@@ -167,6 +168,10 @@ def files_and_cdf_from_proba(proba):
 
 def pick(n, files, cdf):
 	return [files[bisect(cdf, random())] for i in range(n)]
+
+def rotate_images(images,angle):
+	return rotate(images,angle=angle,axes=(1,2))
+
 
 def remove(path):
 	"""

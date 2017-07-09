@@ -14,7 +14,7 @@ from datasets.dataset import Dataset
 from datasets.weather_dataset import WeatherDataset, FilteredDataset
 from datasets.weather_in_input import WeatherInInputDataset
 
-def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LABELS, input_length=1, thresholds=None, batch_size=64):
+def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LABELS, input_length=1, thresholds=None, batch_size=64,test_time_augmentation=False):
 	"""
 	Yield tuples of predictions as (image_name, probas, tags)
 	-Parameter model: the model to use to make predictions
@@ -47,7 +47,15 @@ def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LA
 
 	with tqdm(total=len(image_files)) as pbar:
 		# larger batch size (relatively to the number of GPU) run out of memory
-		proba_predictions = model.model.predict(inputs, batch_size=batch_size, verbose=1)
+		if (test_time_augmentation):
+			probaPredictions = model.predict(data_set, verbose=1)
+			proba_predictions += model.model.predict(rotate_images(inputs,angle=90), batch_size=batch_size, verbose=1)
+			proba_predictions += model.model.predict(rotate_images(inputs,angle=180), batch_size=batch_size, verbose=1)
+			proba_predictions += model.model.predict(rotate_images(inputs,angle=270), batch_size=batch_size, verbose=1)
+			proba_predictions = proba_predictions/4.0
+		else:
+			proba_predictions = model.model.predict(inputs, batch_size=batch_size, verbose=1)
+
 		tag_predictions = get_predictions(proba_predictions, labels, thresholds)
 		for f_img, probas, tags in zip(image_files, proba_predictions, tag_predictions):
 			yield (f_img, probas, tags)
@@ -65,6 +73,7 @@ if __name__ == "__main__":
 		parser.add_argument("--cpu-only", default=False, help="Wether to only use CPU or not", type=bool)
 		parser.add_argument("--thresholds", default=None, help="A path to a csv representation of the thresholds to use", type=str)
 		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
+		parser.add_argument("--tta", default=False, help="Test time augmentation", type=bool)
 		args = vars(parser.parse_args())
 		print("args", args)
 
@@ -105,7 +114,7 @@ if __name__ == "__main__":
 				print("Finding optimal thresholds...")
 				with open("train/validation-files.csv") as f_validation_files:
 					validation_files = f_validation_files.readline().split(",")
-					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length)])
+					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length,test_time_augmentation=args['tta']) ])
 					predicted_labels = get_labels_dict()
 					true_tags = [predicted_labels[img] for img in validation_files]
 					true_tags = np.array([[x for i, x in enumerate(l) if i in label_idx] for l in true_tags]) # filter to only keep labels of interest
@@ -135,7 +144,7 @@ if __name__ == "__main__":
 				pred_f.write("image_name,tags\n")
 				raw_pred_f.write("image_name,{tags}\n".format(tags=" ".join(labels)))
 
-				for f_img, probas, tags in predict(cnn, list_imgs, data_dir, image_data_fmt, input_shape, labels=labels, thresholds=thresholds, input_length=data.input_length):
+				for f_img, probas, tags in predict(cnn, list_imgs, data_dir, image_data_fmt, input_shape, labels=labels, thresholds=thresholds, input_length=data.input_length,test_time_augmentation=args['tta']):
 					raw_pred_f.write("{f},{probas}\n".format(f=f_img.split(".")[0], probas=" ".join([str(i) for i in probas])))
 					pred_f.write("{f},{tags}\n".format(f=f_img.split(".")[0], tags=" ".join(tags)))
 
