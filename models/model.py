@@ -64,7 +64,7 @@ class Model(object):
 		res = np.zeros((n_inputs, n_labels))
 		# quite simple here, but could be used to do things like remove outliers etc
 		for i in range(n_tta):
-			res += scores[:, :, i]
+			res += scores[i, :, :]
 		return res / n_tta
 
 	def predict_proba(self, data_set, batch_size=64):
