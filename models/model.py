@@ -8,17 +8,18 @@ from constants import LABELS
 from callbacks.validation_checkpoint import ValidationCheckpoint
 from callbacks.logger import Logger
 from callbacks.reduce_lr_on_plateau import ReduceLROnPlateau
-from utils import get_predictions, get_inputs_shape, F2Score
+from utils import get_predictions, get_inputs_shape, F2Score,rotate_images
 
 class Model(object):
 	"""
 	An absctract structure for a model that can be trained and make predictions
 	"""
-	def __init__(self, data, model=None, n_gpus=-1):
+	def __init__(self, data, model=None, n_gpus=-1,test_time_augmentation=False):
 		"""
 		data: the dataset to use
 		n_gpus: The number of GPUs to use. -1 for the max, 0 for CPU only
 		"""
+		self.test_time_augmentation=test_time_augmentation
 		self.data = data
 		self.n_gpus = n_gpus
 		if n_gpus == -1:
@@ -87,7 +88,14 @@ class Model(object):
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(model, data_set, expectations):
-				rawPredictions = model.predict(data_set, verbose=1)
+				if test_time_augmentation:
+					rawPredictions = model.predict(data_set, verbose=1)
+					rawPredictions += model.predict(rotate_images(data_set,90), verbose=1)
+					rawPredictions += model.predict(rotate_images(data_set,180), verbose=1)
+					rawPredictions += model.predict(rotate_images(data_set,270), verbose=1)
+					rawPredictions=rawPredictions/4.0
+				else:
+					rawPredictions = model.predict(data_set, verbose=1)
 				predictions = get_predictions(rawPredictions, self.data.labels)
 				predictions = np.array([x for x in predictions])
 				return np.mean([F2Score(

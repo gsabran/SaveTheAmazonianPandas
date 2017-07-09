@@ -46,9 +46,10 @@ if __name__ == "__main__":
 		parser.add_argument("-c", "--cnn", default="", help='Which CNN to use. Can be "xception", "vgg16" or "ekami" or left blank for now.', type=str)
 		parser.add_argument("--data-proportion", default=1, help="A proportion of the data to use for training", type=float)
 		parser.add_argument("--generate-data", default=False, help="Wether to generate data or use the original dataset", type=bool)
-		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
+		parser.add_argument("--dataset", default=None, help="The dataset to Usinge", type=str)
 		parser.add_argument("--training-files", default=None, help="Files to use for training", type=str)
 		parser.add_argument("--validation-files", default=None, help="Files to use for validation", type=str)
+		parser.add_argument("--tta", default=False, help="Weather to use TTA when scoring / predicting", type=bool)
 
 		args = vars(parser.parse_args())
 		print("args", args)
@@ -91,20 +92,20 @@ if __name__ == "__main__":
 
 		if args["cnn"] == "xception":
 			print("Using Xception architecture")
-			cnn = XceptionCNN(data, n_gpus=n_gpus)
+			cnn = XceptionCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
 		elif args["cnn"] == "vgg16":
 			print("Using VGG16 architecture")
-			cnn = VGG16CNN(data, n_gpus=n_gpus)
+			cnn = VGG16CNN(data, n_gpus=n_gpus, with_tta=args["tta"])
 		elif args["cnn"] == "ekami":
 			print("Using Ekami architecture")
-			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus)
+			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus, with_tta=args["tta"])
 		elif args["cnn"] == "gui":
 			print("Using GuiNet architecture")
 			weather_model = load_model(args["helper_model"])
-			cnn = GuiNet(weather_model, data, n_gpus=n_gpus)
+			cnn = GuiNet(weather_model, data, n_gpus=n_gpus, with_tta=args["tta"])
 		else:
 			print("Using simple model architecture")
-			cnn = SimpleCNN(data, n_gpus=n_gpus)
+			cnn = SimpleCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
 
 		if args["model"] != "":
 			print("Loading model {m}".format(m=args["model"]))
