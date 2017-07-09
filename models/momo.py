@@ -19,9 +19,9 @@ from constants import NUM_WEATHER
 
 
 class MomoWeatherNet(Model):
-    def __init__(self, data, model=None, n_gpus=-1, trainable=True):
+    def __init__(self, data, model=None, n_gpus=-1, trainable=True,test_time_augmentation=False):
         self.trainable = trainable
-        super(MomoWeatherNet, self).__init__(data, model=model, n_gpus=n_gpus)
+        super(MomoWeatherNet, self).__init__(data, model=model, n_gpus=n_gpus,test_time_augmentation=test_time_augmentation)
         for layer in self.model.layers:
             layer.trainable = trainable
 
