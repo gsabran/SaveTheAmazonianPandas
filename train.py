@@ -49,7 +49,7 @@ if __name__ == "__main__":
 		parser.add_argument("--dataset", default=None, help="The dataset to Usinge", type=str)
 		parser.add_argument("--training-files", default=None, help="Files to use for training", type=str)
 		parser.add_argument("--validation-files", default=None, help="Files to use for validation", type=str)
-		parser.add_argument("--tta", default=False, help="Weather to use TTA when scoring / predicting", type=bool)
+		parser.add_argument("--tta", default=False, help="Wether to use TTA when scoring / predicting", type=bool)
 
 		args = vars(parser.parse_args())
 		print("args", args)

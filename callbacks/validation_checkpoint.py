@@ -24,14 +24,14 @@ class ValidationCheckpoint(Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		logs = logs if logs is not None else {}
 		print("\nScoring validation dataset...".format(epoch=epoch))
-		train_score = self.scoring(self.model, self.training_input, self.training_output)
+		train_score = self.scoring(self.training_input, self.training_output)
 		logs["f2_train_score"] = train_score
 
 		if len(self.validation_input) == 0:
 			print("No data provided to validate model")
 			score = 0.0
 		else:
-			score = self.scoring(self.model, self.validation_input, self.validation_output)
+			score = self.scoring(self.validation_input, self.validation_output)
 		print("\nValidation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
 		print("Traning score is {score}".format(score=train_score))
 		logs["f2_val_score"] = score

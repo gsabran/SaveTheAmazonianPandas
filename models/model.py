@@ -8,18 +8,18 @@ from constants import LABELS
 from callbacks.validation_checkpoint import ValidationCheckpoint
 from callbacks.logger import Logger
 from callbacks.reduce_lr_on_plateau import ReduceLROnPlateau
-from utils import get_predictions, get_inputs_shape, F2Score,rotate_images
+from utils import get_predictions, get_inputs_shape, F2Score
 
 class Model(object):
 	"""
 	An absctract structure for a model that can be trained and make predictions
 	"""
-	def __init__(self, data, model=None, n_gpus=-1,test_time_augmentation=False):
+	def __init__(self, data, model=None, n_gpus=-1, with_tta=False):
 		"""
 		data: the dataset to use
 		n_gpus: The number of GPUs to use. -1 for the max, 0 for CPU only
 		"""
-		self.test_time_augmentation=test_time_augmentation
+		self.tta_enable = with_tta
 		self.data = data
 		self.n_gpus = n_gpus
 		if n_gpus == -1:
@@ -56,6 +56,30 @@ class Model(object):
 			metrics=['binary_crossentropy']
 		)
 
+	def _merge_tta_score(self, scores):
+		"""
+		Returns a final probability from different predictions for a same input
+		"""
+		n_tta, n_inputs, n_labels = scores.shape
+		res = np.zeros((n_inputs, n_labels))
+		# quite simple here, but could be used to do things like remove outliers etc
+		for i in range(n_tta):
+			res += scores[:, :, i]
+		return res / n_tta
+
+	def predict_proba(self, data_set, batch_size=64):
+		"""
+		For each input, returns a probability prediction for each tag
+		"""
+		if self.tta_enable:
+			tta = self.data.generate_tta(data_set)
+			rawPredictions = np.zeros((len(tta), len(data_set), len(self.data.labels)))
+			for i, ds in enumerate(tta):
+				rawPredictions[i] = self.model.predict(ds, batch_size=batch_size, verbose=1)
+			return self._merge_tta_score(rawPredictions)
+		else:
+			return self.model.predict(data_set, batch_size=batch_size, verbose=1)
+
 	def fit(self, n_epoch, batch_size, validating=True, generating=False):
 		"""
 		Fit the model
@@ -87,15 +111,9 @@ class Model(object):
 			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
-			def score(model, data_set, expectations):
-				if (self.test_time_augmentation):
-					rawPredictions = model.predict(data_set, verbose=1)
-					rawPredictions += model.predict(rotate_images(data_set,90), verbose=1)
-					rawPredictions += model.predict(rotate_images(data_set,180), verbose=1)
-					rawPredictions += model.predict(rotate_images(data_set,270), verbose=1)
-					rawPredictions=rawPredictions/4.0
-				else:
-					rawPredictions = model.predict(data_set, verbose=1)
+			def score(data_set, expectations):
+				rawPredictions = self.predict_proba(data_set)
+
 				predictions = get_predictions(rawPredictions, self.data.labels)
 				predictions = np.array([x for x in predictions])
 				return np.mean([F2Score(
