@@ -17,9 +17,9 @@ from .model import Model
 from constants import NUM_WEATHER
 from layers.weighted_average import *
 class GuiNet(Model):
-    def __init__(self, weather_model, data, model=None, n_gpus=-1):
+    def __init__(self, weather_model, *args, **kwargs):
         self.weather_model = weather_model
-        super(GuiNet, self).__init__(data, model=model, n_gpus=n_gpus)
+        super(GuiNet, self).__init__(data, *args, **kwargs)
 
     def _create_submodel(self, inp, i):
         # add conv layers
