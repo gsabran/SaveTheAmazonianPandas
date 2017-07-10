@@ -107,7 +107,7 @@ if __name__ == "__main__":
 				print("Finding optimal thresholds...")
 				with open("train/validation-files.csv") as f_validation_files:
 					validation_files = f_validation_files.readline().split(",")
-					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length) ])
+					probas = np.array([p for f, p, t in predict(cnn, validation_files, TRAIN_DATA_DIR, image_data_fmt, input_shape, input_length=data.input_length)])
 					predicted_labels = get_labels_dict()
 					true_tags = [predicted_labels[img] for img in validation_files]
 					true_tags = np.array([[x for i, x in enumerate(l) if i in label_idx] for l in true_tags]) # filter to only keep labels of interest

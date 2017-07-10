@@ -46,7 +46,7 @@ if __name__ == "__main__":
 		parser.add_argument("-c", "--cnn", default="", help='Which CNN to use. Can be "xception", "vgg16" or "ekami" or left blank for now.', type=str)
 		parser.add_argument("--data-proportion", default=1, help="A proportion of the data to use for training", type=float)
 		parser.add_argument("--generate-data", default=False, help="Wether to generate data or use the original dataset", type=bool)
-		parser.add_argument("--dataset", default=None, help="The dataset to Usinge", type=str)
+		parser.add_argument("--dataset", default=None, help="The dataset to use", type=str)
 		parser.add_argument("--training-files", default=None, help="Files to use for training", type=str)
 		parser.add_argument("--validation-files", default=None, help="Files to use for validation", type=str)
 		parser.add_argument("--tta", default=False, help="Wether to use TTA when scoring / predicting", type=bool)
