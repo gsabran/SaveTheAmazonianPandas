@@ -1,3 +1,4 @@
+from shutil import copyfile
 from keras.callbacks import Callback
 
 class ValidationCheckpoint(Callback):
@@ -6,9 +7,10 @@ class ValidationCheckpoint(Callback):
 	- Parameter scoring: a function that takes (model, input, output) and returns a score
 	- Parameter patience: the number of epoch without improvement that can be tolerated
 	- Parameter checkpoint_path: path to where the checkpoint of the best model should be saved
+	- Parameter sessionId: an id to easily identify the running session
 	"""
 
-	def __init__(self, scoring, training_input, training_output, validation_input, validation_output, checkpoint_path, patience=1):
+	def __init__(self, scoring, training_input, training_output, validation_input, validation_output, checkpoint_path, sessionId, patience=1):
 		super(ValidationCheckpoint, self).__init__()
 		self.scoring = scoring
 		self.training_input = training_input
@@ -20,6 +22,7 @@ class ValidationCheckpoint(Callback):
 		self.patience = patience
 		self.remaining_patience = patience
 		self.checkpoint_path = checkpoint_path
+		self.sessionId = sessionId
 
 	def on_epoch_end(self, epoch, logs=None):
 		logs = logs if logs is not None else {}
@@ -46,3 +49,4 @@ class ValidationCheckpoint(Callback):
 			self.remaining_patience = self.patience
 			self.best_epoch = epoch
 			self.model.save(self.checkpoint_path, overwrite=True)
+			copyfile(self.checkpoint_path, "train/archive/{id}-best-checkpoint.hdf5".format(id=self.sessionId))
