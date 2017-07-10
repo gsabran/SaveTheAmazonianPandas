@@ -16,6 +16,7 @@ from keras import backend as K
 from bisect import bisect
 from random import random
 from constants import LABELS, WEATHER_IDX, DATA_DIR, ORIGINAL_LABEL_FILE, CHANNELS, IMG_ROWS, IMG_COLS, IMG_SCALE, TRAIN_DATA_DIR
+from datasets.image_generation import flip_axis
 
 def get_uniq_name():
 	"""
@@ -169,9 +170,27 @@ def files_and_cdf_from_proba(proba):
 def pick(n, files, cdf):
 	return [files[bisect(cdf, random())] for i in range(n)]
 
-def rotate_images(images,angle):
-	return rotate(images,angle=angle,axes=(1,2))
+def rotate_images(images, theta, flip=False):
+	"""
+	Rotate a list of images by an angle multiplied by pi/2
+	"""
 
+	data_format = K.image_data_format()
+	if K.image_data_format() == 'channels_first':
+		row_axis = 2
+		col_axis = 3
+	else:
+		row_axis = 1
+		col_axis = 2
+
+	print("Rotating {n} images...".format(n=len(images)))
+	res = []
+	for img in images:
+		img = np.rot90(img, theta, axes=(row_axis - 1, col_axis - 1))
+		if flip:
+			img = flip_axis(img, row_axis)
+		res.append(img)
+	return np.array(res)
 
 def remove(path):
 	"""

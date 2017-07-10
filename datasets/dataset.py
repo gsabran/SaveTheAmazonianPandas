@@ -3,7 +3,7 @@ from shutil import copyfile
 import os
 from tqdm import tqdm
 from keras import backend as K
-from keras.preprocessing.image import ImageDataGenerator
+from datasets.image_generation import ImageDataGenerator
 from scipy.misc import imresize
 import numpy as np
 
@@ -177,7 +177,7 @@ class Dataset(object):
 		"""
 		Return the input corresponding to one image file
 		"""
-		return get_resized_image(image_name, data_dir, image_data_fmt, input_shape) / 255.0
+		return get_resized_image(image_name, data_dir, image_data_fmt, input_shape)# / 255.0
 
 
 	def generate_tta(self, inputs):
@@ -187,7 +187,8 @@ class Dataset(object):
 		tta = []
 		image_data = inputs if self.input_length == 1 else inputs[0]
 		for i in range(4):
-			tta.append(rotate_images(inputs, 90 * i))
+			tta.append(rotate_images(inputs, i, flip=False))
+			tta.append(rotate_images(inputs, i, flip=True))
 		if self.input_length == 1:
 			return tta
 		for i, ds in enumerate(tta):
