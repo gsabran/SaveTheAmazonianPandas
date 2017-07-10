@@ -1,4 +1,5 @@
 from shutil import copyfile
+from os import remove
 from keras.callbacks import Callback
 
 class ValidationCheckpoint(Callback):
@@ -23,6 +24,7 @@ class ValidationCheckpoint(Callback):
 		self.remaining_patience = patience
 		self.checkpoint_path = checkpoint_path
 		self.sessionId = sessionId
+		self.archived_checkpoint = None
 
 	def on_epoch_end(self, epoch, logs=None):
 		logs = logs if logs is not None else {}
@@ -49,4 +51,7 @@ class ValidationCheckpoint(Callback):
 			self.remaining_patience = self.patience
 			self.best_epoch = epoch
 			self.model.save(self.checkpoint_path, overwrite=True)
-			copyfile(self.checkpoint_path, "train/archive/{id}-best-checkpoint.hdf5".format(id=self.sessionId))
+			if self.archived_checkpoint is not None:
+				remove(self.archived_checkpoint)
+			self.archived_checkpoint = "train/archive/{id}-best-checkpoint-{s}.hdf5".format(id=self.sessionId, s=str(score))
+			copyfile(self.checkpoint_path, self.archived_checkpoint)
