@@ -47,7 +47,7 @@ class AmazonKerasClassifier(Model):
         x = Dense(512, activation='relu')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
-        x = Dense(len(self.data.labels), activation='softmax')(x)
+        x = Dense(len(self.data.labels), activation='sigmoid')(x)
         model = md(inputs=inp, outputs=x)
         self.model = model
 

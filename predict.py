@@ -6,7 +6,7 @@ from shutil import copyfile
 from keras import backend as K
 import numpy as np
 from keras.models import load_model
-from utils import get_uniq_name, get_predictions, get_labels_dict, optimise_f2_thresholds, get_resized_image, get_inputs_shape
+from utils import get_uniq_name, get_predictions, get_labels_dict, optimise_f2_thresholds, get_inputs_shape
 from models.model import Model
 from train import TRAINED_MODEL
 from constants import LABELS, TRAIN_DATA_DIR, TEST_DATA_DIR

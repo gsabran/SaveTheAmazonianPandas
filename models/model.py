@@ -2,13 +2,14 @@ import keras
 from keras import backend as K
 from keras.callbacks import CSVLogger, TensorBoard
 import numpy as np
+from tqdm import tqdm
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
 from constants import LABELS
 from callbacks.validation_checkpoint import ValidationCheckpoint
 from callbacks.logger import Logger
 from callbacks.reduce_lr_on_plateau import ReduceLROnPlateau
-from utils import get_predictions, get_inputs_shape, F2Score
+from utils import get_predictions, get_inputs_shape, F2Score, chunk
 
 class Model(object):
 	"""
@@ -21,6 +22,7 @@ class Model(object):
 		"""
 		self.tta_enable = with_tta
 		self.data = data
+		data.set_normalization(self._normalize_images_data)
 		self.n_gpus = n_gpus
 		if n_gpus == -1:
 			self.n_gpus = get_gpu_max_number()
@@ -53,7 +55,7 @@ class Model(object):
 		self.model.compile(
 			loss=keras.losses.binary_crossentropy,
 			optimizer=keras.optimizers.Adadelta(),
-			metrics=['binary_crossentropy']
+			metrics=['binary_crossentropy', 'accuracy']
 		)
 
 	def _merge_tta_score(self, scores):
@@ -67,15 +69,29 @@ class Model(object):
 			res += scores[i, :, :]
 		return res / n_tta
 
+	def _normalize_images_data(self, image):
+		"""
+		Apply some preprocessing to images that are (3, w, h) floats on a scale of 0 to 255
+		"""
+		image = image / 255.
+		# Zero-center by mean pixel assuming (:, :, 3) image format
+		image[:, :, 0] -= 0.40694815
+		image[:, :, 1] -= 0.25517627
+		image[:, :, 2] -= 0.4464766
+		return image
+
 	def predict_proba(self, data_set, batch_size=64):
 		"""
 		For each input, returns a probability prediction for each tag
 		"""
 		if self.tta_enable:
-			tta = self.data.generate_tta(data_set)
 			rawPredictions = np.zeros((len(tta), len(data_set), len(self.data.labels)))
-			for i, ds in enumerate(tta):
-				rawPredictions[i] = self.model.predict(ds, batch_size=batch_size, verbose=1)
+			with tqdm(total=len(data_set)) as pbar:
+				for c_i, c in enumerate(chunk(data_set, batch_size)):
+					tta = self.data.generate_tta(c)
+					for i, ds in enumerate(tta):
+						rawPredictions[c_i * batch_size + i] = self.model.predict(ds, batch_size=batch_size, verbose=0)
+						pbar.update(1)
 			return self._merge_tta_score(rawPredictions)
 		else:
 			return self.model.predict(data_set, batch_size=batch_size, verbose=1)
@@ -112,7 +128,10 @@ class Model(object):
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(data_set, expectations):
+				tta = self.tta_enable
+				self.tta_enable = False
 				rawPredictions = self.predict_proba(data_set)
+				self.tta_enable = tta
 
 				predictions = get_predictions(rawPredictions, self.data.labels)
 				predictions = np.array([x for x in predictions])
