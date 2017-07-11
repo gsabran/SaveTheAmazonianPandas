@@ -1,7 +1,6 @@
 import keras
 from keras.layers import GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout
-from keras.optimizers import Adam
 
 from .model import Model
 
@@ -40,10 +39,6 @@ class PretrainedModel(Model):
 
 	def paralelize(self):
 		pass # paralelization done during fitting
-
-	def compile(self, learn_rate=0.001):
-		opt = Adam(lr=learn_rate)
-		self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
 	def fit(self, n_epoch, batch_size, validating=True, generating=False):
 		print("Fitting top dense layers")

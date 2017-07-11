@@ -148,16 +148,21 @@ class Dataset(object):
 
 	def _xyData(self, image_data_fmt, isTraining, input_shape):
 		dataset = self.training_files if isTraining else self.validation_files
-		Y = []
-		X = []
+		X = None
+		Y = None
 		print("Reading inputs...")
 		with tqdm(total=len(dataset)) as pbar:
 			for f in dataset:
 				file = f.split('/')[-1].split('.')[0]
-				X.append(self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape))
-				Y.append(self.outputs[file])
+				x = self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape)
+				y = self.outputs[file]
+				if X is None:
+					X = np.array([]).reshape((0,) + x.shape)
+					Y = np.array([]).reshape((0,) + y.shape)
+				X.append(x)
+				Y.append(y)
 				pbar.update(1)
-		return [np.array(X), np.array(Y)]
+		return [X, Y]
 
 	def trainingSet(self, image_data_fmt, input_shape):
 		"""
@@ -186,7 +191,6 @@ class Dataset(object):
 			input_shape,
 			self._image_normalization
 		)
-
 
 	def generate_tta(self, inputs):
 		"""

@@ -9,15 +9,18 @@ import keras.backend as K
 
 from layers.scale import Scale
 
-from .pretrained_model import PretrainedModel
+from .model import Model
 
-class DenseNet121(PretrainedModel):
+class DenseNet121(Model):
 	"""
 	An adaptation of the DenseNet121 model
 	"""
 
-	def _load_pretrained_model(self):
-		return self.DenseNet(include_top=False, input_shape=self.input_shape)
+	def create_base_model(self):
+		base_model = self.DenseNet(include_top=False, input_shape=self.input_shape)
+		self.base_model = base_model
+		predictions = self._add_top_dense_layers(base_model.output)
+		self.model = keras.models.Model(inputs=base_model.input, outputs=predictions)
 
 	def _add_top_dense_layers(self, x):
 		x = GlobalAveragePooling2D()(x)
@@ -32,8 +35,12 @@ class DenseNet121(PretrainedModel):
 		# and a logistic layer
 		return Dense(len(self.data.labels), activation="sigmoid")(x)
 
+	def _prepare_shalow_training(self):
+		for layer in self.base_model.layers:
+			layer.trainable = True # no weights loaded
+
 	def DenseNet(self, input_shape, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
-							 dropout_rate=0.0, weight_decay=1e-4, classes=1000, weights_path=None,
+							 dropout_rate=0.25, weight_decay=1e-4, classes=1000, weights_path=None,
 							 include_top=True):
 		"""Instantiate the DenseNet 121 architecture,
 				# Arguments

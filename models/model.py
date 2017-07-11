@@ -1,8 +1,10 @@
 import keras
 from keras import backend as K
 from keras.callbacks import CSVLogger, TensorBoard
+from keras.optimizers import Adam
 import numpy as np
 from tqdm import tqdm
+from skimage import color
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
 from constants import LABELS
@@ -51,12 +53,10 @@ class Model(object):
 		if self.n_gpus > 1:
 			self.model = to_multi_gpu(self.model, self.n_gpus)
 
-	def compile(self):
-		self.model.compile(
-			loss=keras.losses.binary_crossentropy,
-			optimizer=keras.optimizers.Adadelta(),
-			metrics=['binary_crossentropy', 'accuracy']
-		)
+
+	def compile(self, learn_rate=0.001):
+		opt = Adam(lr=learn_rate)
+		self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['binary_crossentropy', 'accuracy'])
 
 	def _merge_tta_score(self, scores):
 		"""
@@ -71,8 +71,9 @@ class Model(object):
 
 	def _normalize_images_data(self, image):
 		"""
-		Apply some preprocessing to images that are (3, w, h) floats on a scale of 0 to 255
+		Apply some preprocessing to images that are (3, w, h) floats on a scale of 0 to 255, in RGB
 		"""
+		image = color.rgb2hsv(image)
 		image = image / 255.
 		# Zero-center by mean pixel assuming (:, :, 3) image format
 		image[:, :, 0] -= 0.40694815
