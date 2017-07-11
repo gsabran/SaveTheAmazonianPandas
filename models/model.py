@@ -128,6 +128,7 @@ class Model(object):
 				validation_input=x_validate,
 				validation_output=y_validate,
 				checkpoint_path=checkpoint_path,
+				sessionId=self.data.sessionId,
 				patience=10
 			)
 			callbacks.append(validationCheckpoint)
