@@ -10,6 +10,7 @@ from constants import TRAIN_DATA_DIR
 from utils import get_uniq_name, remove
 from models.exception import XceptionCNN
 from models.vgg16 import VGG16CNN
+from models.densenet121 import DenseNet121
 from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
 from models.gui import GuiNet
@@ -103,6 +104,9 @@ if __name__ == "__main__":
 			print("Using GuiNet architecture")
 			weather_model = load_model(args["helper_model"])
 			cnn = GuiNet(weather_model, data, n_gpus=n_gpus, with_tta=args["tta"])
+		elif args["cnn"] == "dense121":
+			print("Using DenseNet-121 architecture")
+			cnn = DenseNet121(data, n_gpus=n_gpus, with_tta=args["tta"])
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data, n_gpus=n_gpus, with_tta=args["tta"])

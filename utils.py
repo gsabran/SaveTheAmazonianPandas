@@ -130,6 +130,7 @@ def get_resized_image(f, data_dir, image_data_fmt, input_shape, normalization):
 	if image_data_fmt == "channels_first":
 		img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
 	img = imresize(img, input_shape)
+	img = img / 1.
 	img = normalization(img)
 	return img
 

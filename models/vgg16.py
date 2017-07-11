@@ -1,9 +1,10 @@
+import numpy as np
 import keras
 from keras.applications.vgg16 import VGG16
 from keras.applications.imagenet_utils import preprocess_input
 from keras.layers import GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout
-from keras.optimizers import SGD
+from keras.optimizers import Adam
 
 from .model import Model
 
@@ -51,7 +52,7 @@ class VGG16CNN(Model):
 		for layer in self.model.layers:
 			layer.trainable = True
 
-		if self.multi_gpu:
+		if self.n_gpus > 1:
 			super(VGG16CNN, self).paralelize()
 
 		self.compile(learn_rate=0.00005)
@@ -60,7 +61,4 @@ class VGG16CNN(Model):
 		return super(VGG16CNN, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
 
 	def _normalize_images_data(self, image):
-		"""
-		Apply some preprocessing to images that are (3, w, h) floats on a scale of 0 to 255
-		"""
-		return preprocess_input([image])[0]
+		return preprocess_input(np.array([image]))[0]
