@@ -92,6 +92,7 @@ class Dataset(object):
 		files, cdf = self.files_and_cdf
 		data = self.trainingSet(image_data_fmt, input_shape)
 		if input_length == 1:
+			data = [i for i in data]
 			data[0] = [data[0]]
 
 		data_dict = {}

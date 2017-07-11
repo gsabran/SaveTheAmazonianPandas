@@ -10,6 +10,7 @@ from constants import TRAIN_DATA_DIR
 from utils import get_uniq_name, remove
 from models.exception import XceptionCNN
 from models.vgg16 import VGG16CNN
+from models.inception_v3 import InceptionV3
 from models.densenet121 import DenseNet121
 from models.ekami_model import AmazonKerasClassifier
 from models.simple_cnn import SimpleCNN
@@ -97,6 +98,9 @@ if __name__ == "__main__":
 		elif args["cnn"] == "vgg16":
 			print("Using VGG16 architecture")
 			cnn = VGG16CNN(data, n_gpus=n_gpus, with_tta=args["tta"])
+		elif args["cnn"] == "inception":
+			print("Using Inception V3 architecture")
+			cnn = InceptionV3(data, n_gpus=n_gpus, with_tta=args["tta"])
 		elif args["cnn"] == "ekami":
 			print("Using Ekami architecture")
 			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus, with_tta=args["tta"])

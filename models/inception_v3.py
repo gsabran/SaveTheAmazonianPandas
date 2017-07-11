@@ -1,18 +1,17 @@
 import numpy as np
-from keras.applications.vgg16 import VGG16
-from keras.applications.imagenet_utils import preprocess_input
+from keras.applications.inception_v3 import InceptionV3 as BaseCNN, preprocess_input
 from keras.layers import GlobalAveragePooling2D
 from keras.layers.core import Dense, Dropout
 
 from .pretrained_model import PretrainedModel
 
-class VGG16CNN(PretrainedModel):
+class InceptionV3(PretrainedModel):
 	"""
-	An adaptation of the VGG16 model
+	An adaptation of the Inception model
 	"""
 
 	def _load_pretrained_model(self):
-		return VGG16(include_top=False, input_shape=self.input_shape)
+		return BaseCNN(include_top=False, input_shape=self.input_shape)
 
 	def _add_top_dense_layers(self, x):
 		x = GlobalAveragePooling2D()(x)
@@ -28,4 +27,4 @@ class VGG16CNN(PretrainedModel):
 		return Dense(len(self.data.labels), activation='sigmoid')(x)
 
 	def _normalize_images_data(self, image):
-		return preprocess_input(np.array([image]))[0]
+		return preprocess_input(image)

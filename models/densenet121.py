@@ -6,21 +6,20 @@ from keras.layers.convolutional import Convolution2D, Conv2D
 from keras.layers.pooling import AveragePooling2D, GlobalAveragePooling2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 import keras.backend as K
-from keras.optimizers import Adam
 
 from layers.scale import Scale
 
-from .model import Model
+from .pretrained_model import PretrainedModel
 
-class DenseNet121(Model):
+class DenseNet121(PretrainedModel):
 	"""
 	An adaptation of the DenseNet121 model
 	"""
-	def create_base_model(self):
-		base_model = self.DenseNet(include_top=False, input_shape=self.input_shape)
 
-		# add a global spatial average pooling layer
-		x = base_model.output
+	def _load_pretrained_model(self):
+		return self.DenseNet(include_top=False, input_shape=self.input_shape)
+
+	def _add_top_dense_layers(self, x):
 		x = GlobalAveragePooling2D()(x)
 		x = Dropout(0.25)(x)
 		# let's add a fully-connected layer
@@ -31,18 +30,7 @@ class DenseNet121(Model):
 		x = Dense(128, activation="relu")(x)
 		x = Dropout(0.25)(x)
 		# and a logistic layer
-		predictions = Dense(len(self.data.labels), activation="sigmoid")(x)
-
-		# this is the model we will train
-		model = keras.models.Model(inputs=base_model.input, outputs=predictions)
-
-		# first: train only the top layers (which were randomly initialized)
-		# i.e. freeze all convolutional InceptionV3 layers
-		for layer in base_model.layers:
-			layer.trainable = False
-		self.model = model
-
-	
+		return Dense(len(self.data.labels), activation="sigmoid")(x)
 
 	def DenseNet(self, input_shape, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
 							 dropout_rate=0.0, weight_decay=1e-4, classes=1000, weights_path=None,
@@ -203,25 +191,3 @@ class DenseNet121(Model):
 				nb_filter += growth_rate
 
 		return concat_feat, nb_filter
-
-	def paralelize(self):
-		pass # paralelization done during fitting
-
-	def compile(self, learn_rate=0.001):
-		opt = Adam(lr=learn_rate)
-		self.model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
-
-	def fit(self, n_epoch, batch_size, validating=True, generating=False):
-		print("Fitting top dense layers")
-		super(DenseNet121, self).fit(30, batch_size, validating=validating, generating=generating)
-
-		for layer in self.model.layers:
-			layer.trainable = True
-
-		if self.n_gpus > 1:
-			super(DenseNet121, self).paralelize()
-
-		self.compile(learn_rate=0.00005)
-
-		print("Fitting lower conv layers")
-		return super(DenseNet121, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
