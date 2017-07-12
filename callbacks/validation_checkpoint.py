@@ -40,7 +40,7 @@ class ValidationCheckpoint(Callback):
 		print("\nValidation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
 		print("Traning score is {score}".format(score=train_score))
 		logs["f2_val_score"] = score
-		if score <= self.best_score:
+		if score < self.best_score:
 			self.remaining_patience -= 1
 			if self.remaining_patience == 0:
 				self.model.stop_training = True

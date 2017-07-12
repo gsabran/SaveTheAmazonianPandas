@@ -33,4 +33,11 @@ class WeatherInInputDataset(Dataset):
     """
     Return the input corresponding to one image file
     """
-    return get_resized_image(image_name, data_dir, image_data_fmt, input_shape), [self.outputs[image_name][i] for i in WEATHER_IDX]
+    img = get_resized_image(
+      image_name,
+      data_dir,
+      image_data_fmt,
+      input_shape,
+      self._image_normalization
+    )
+    return img, [self.outputs[image_name][i] for i in WEATHER_IDX]

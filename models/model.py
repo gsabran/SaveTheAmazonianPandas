@@ -1,14 +1,17 @@
 import keras
 from keras import backend as K
 from keras.callbacks import CSVLogger, TensorBoard
+from keras.optimizers import Adam
 import numpy as np
+from tqdm import tqdm
+from skimage import color
 
 from .parallel_model import to_multi_gpu, get_gpu_max_number
 from constants import LABELS
 from callbacks.validation_checkpoint import ValidationCheckpoint
 from callbacks.logger import Logger
 from callbacks.reduce_lr_on_plateau import ReduceLROnPlateau
-from utils import get_predictions, get_inputs_shape, F2Score
+from utils import get_predictions, get_inputs_shape, F2Score, chunk
 
 class Model(object):
 	"""
@@ -21,6 +24,7 @@ class Model(object):
 		"""
 		self.tta_enable = with_tta
 		self.data = data
+		data.set_normalization(self._normalize_images_data)
 		self.n_gpus = n_gpus
 		if n_gpus == -1:
 			self.n_gpus = get_gpu_max_number()
@@ -49,12 +53,10 @@ class Model(object):
 		if self.n_gpus > 1:
 			self.model = to_multi_gpu(self.model, self.n_gpus)
 
-	def compile(self):
-		self.model.compile(
-			loss=keras.losses.binary_crossentropy,
-			optimizer=keras.optimizers.Adadelta(),
-			metrics=['binary_crossentropy']
-		)
+
+	def compile(self, learn_rate=0.001):
+		opt = Adam(lr=learn_rate)
+		self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['binary_crossentropy', 'accuracy'])
 
 	def _merge_tta_score(self, scores):
 		"""
@@ -67,15 +69,30 @@ class Model(object):
 			res += scores[i, :, :]
 		return res / n_tta
 
+	def _normalize_images_data(self, image):
+		"""
+		Apply some preprocessing to images that are (3, w, h) floats on a scale of 0 to 255, in RGB
+		"""
+		image = color.rgb2hsv(image)
+		image = image / 255.
+		# Zero-center by mean pixel assuming (:, :, 3) image format
+		image[:, :, 0] -= 0.40694815
+		image[:, :, 1] -= 0.25517627
+		image[:, :, 2] -= 0.4464766
+		return image
+
 	def predict_proba(self, data_set, batch_size=64):
 		"""
 		For each input, returns a probability prediction for each tag
 		"""
 		if self.tta_enable:
-			tta = self.data.generate_tta(data_set)
 			rawPredictions = np.zeros((len(tta), len(data_set), len(self.data.labels)))
-			for i, ds in enumerate(tta):
-				rawPredictions[i] = self.model.predict(ds, batch_size=batch_size, verbose=1)
+			with tqdm(total=len(data_set)) as pbar:
+				for c_i, c in enumerate(chunk(data_set, batch_size)):
+					tta = self.data.generate_tta(c)
+					for i, ds in enumerate(tta):
+						rawPredictions[i, c_i * batch_size:(c_i + 1) * batch_size, :] = self.model.predict(ds, batch_size=batch_size, verbose=0)
+						pbar.update((batch_size * 1.) / len(tta))
 			return self._merge_tta_score(rawPredictions)
 		else:
 			return self.model.predict(data_set, batch_size=batch_size, verbose=1)
@@ -94,25 +111,28 @@ class Model(object):
 		checkpoint_path = "train/checkpoint.hdf5"
 		csv_logger = CSVLogger('train/training.log')
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True)
-		# learning_rate_reduction = ReduceLROnPlateau(
-		# 	model=self,
-		# 	monitor='f2_val_score' if validating else 'acc',
-		# 	patience=3,
-		# 	verbose=1,
-		# 	factor=0.5,
-		# 	min_lr_factor=0.0001,
-		# 	mode='max',
-		# 	checkpoint_path=checkpoint_path if validating else None
-		# )
-		# callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
-		callbacks = [csv_logger, tensorboard]
+		learning_rate_reduction = ReduceLROnPlateau(
+			model=self,
+			monitor='f2_val_score' if validating else 'acc',
+			patience=5,
+			verbose=1,
+			factor=0.5,
+			min_lr_factor=0.0001,
+			mode='max',
+			checkpoint_path=checkpoint_path if validating else None
+		)
+		callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
+		# callbacks = [csv_logger, tensorboard]
 
 		if validating:
 			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
 			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
 
 			def score(data_set, expectations):
+				tta = self.tta_enable
+				self.tta_enable = False
 				rawPredictions = self.predict_proba(data_set)
+				self.tta_enable = tta
 
 				predictions = get_predictions(rawPredictions, self.data.labels)
 				predictions = np.array([x for x in predictions])

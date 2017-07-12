@@ -44,4 +44,5 @@ python3 predict.py --model train/model.h5 --data train
 | 0.91312 | 0.9156 | ekami | 100 | no | same, full size images |
 | _ | 0.94 | ekami | 100 | no | truth used in final weather labels |
 | _ | 0.946 | gui | 100 | no | true weather used in dense layer |
+| _ | 0.82 | densenet121 | 100 | no | early stopping - unsure if reliable |
 

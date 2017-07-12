@@ -60,21 +60,22 @@ class Dataset(object):
 			# featurewise_std_normalization=False,
 			# samplewise_std_normalization=False,
 			# zca_whitening=False,
-			rotation_range=180,
+			# rotation_range=180,
 			# width_shift_range=0.,
 			# height_shift_range=0.,
 			# shear_range=0.,
-			# zoom_range=0.,
+			zoom_range=0.15,
 			# channel_shift_range=0.,
 			fill_mode='reflect',
 			# cval=0.,
 			horizontal_flip=True,
 			vertical_flip=True,
 			# rescale=None,
-			preprocessing_function= lambda img: addNoise("gauss", img)
+			# preprocessing_function= lambda img: addNoise("gauss", img)
 		)
 		self._cached_training_set = None
 		self._cached_validation_set = None
+		self._image_normalization = None
 
 	def select_files(self, list_files):
 		"""
@@ -91,6 +92,7 @@ class Dataset(object):
 		files, cdf = self.files_and_cdf
 		data = self.trainingSet(image_data_fmt, input_shape)
 		if input_length == 1:
+			data = [i for i in data]
 			data[0] = [data[0]]
 
 		data_dict = {}
@@ -146,16 +148,21 @@ class Dataset(object):
 
 	def _xyData(self, image_data_fmt, isTraining, input_shape):
 		dataset = self.training_files if isTraining else self.validation_files
-		Y = []
-		X = []
+		X = None
+		Y = None
 		print("Reading inputs...")
 		with tqdm(total=len(dataset)) as pbar:
-			for f in dataset:
+			for i, f in enumerate(dataset):
 				file = f.split('/')[-1].split('.')[0]
-				X.append(self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape))
-				Y.append(self.outputs[file])
+				x = self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape)
+				y = self.outputs[file]
+				if X is None:
+					X = np.zeros((len(dataset),) + x.shape)
+					Y = np.zeros((len(dataset),) + y.shape)
+				X[i] = x
+				Y[i] = y
 				pbar.update(1)
-		return (np.array(X), np.array(Y))
+		return [X, Y]
 
 	def trainingSet(self, image_data_fmt, input_shape):
 		"""
@@ -177,8 +184,13 @@ class Dataset(object):
 		"""
 		Return the input corresponding to one image file
 		"""
-		return get_resized_image(image_name, data_dir, image_data_fmt, input_shape)# / 255.0
-
+		return get_resized_image(
+			image_name,
+			data_dir,
+			image_data_fmt,
+			input_shape,
+			self._image_normalization
+		)
 
 	def generate_tta(self, inputs):
 		"""
@@ -190,9 +202,17 @@ class Dataset(object):
 			tta.append(rotate_images(inputs, i, flip=False))
 			tta.append(rotate_images(inputs, i, flip=True))
 		if self.input_length == 1:
-			return tta
+			return np.array(tta)
 		for i, ds in enumerate(tta):
 			tta[i] = [x for x in inputs]
 			tta[i][0] = ds
-		return tta
+		return np.array(tta)
 
+	def set_normalization(self, image_normalization):
+		"""
+		Set the image normalization that should be used before feeding
+		data to models
+		"""
+		if self._image_normalization is not None:
+			raise RuntimeError("Data normalization already set")
+		self._image_normalization = image_normalization

@@ -6,7 +6,6 @@ import string
 import numpy as np
 from sklearn.metrics import fbeta_score
 from skimage.io import imread
-from skimage import color
 from scipy.misc import imresize
 from scipy.ndimage.interpolation import rotate 
 import os
@@ -121,15 +120,17 @@ def get_inputs_shape():
 	img_size = (int(IMG_ROWS * IMG_SCALE), int(IMG_COLS * IMG_SCALE))
 	return image_data_fmt, input_shape, img_size
 
-def get_resized_image(f, data_dir, image_data_fmt, input_shape):
+def get_resized_image(f, data_dir, image_data_fmt, input_shape, normalization):
 	"""
 	Read the image from file and return it in the expected size
 	"""
 	img = imread(os.path.join(data_dir, "{}.jpg".format(f)))
-	img = color.rgb2hsv(img)
 	if image_data_fmt == "channels_first":
 		img = img.reshape((CHANNELS, IMG_ROWS, IMG_COLS))
-	return imresize(img, input_shape)
+	img = imresize(img, input_shape)
+	img = img / 1.
+	img = normalization(img)
+	return img
 
 # deprecated
 def get_generated_images(originalImageFileName, ext="jpg"):
@@ -174,7 +175,6 @@ def rotate_images(images, theta, flip=False):
 	"""
 	Rotate a list of images by an angle multiplied by pi/2
 	"""
-
 	data_format = K.image_data_format()
 	if K.image_data_format() == 'channels_first':
 		row_axis = 2
@@ -183,7 +183,6 @@ def rotate_images(images, theta, flip=False):
 		row_axis = 1
 		col_axis = 2
 
-	print("Rotating {n} images...".format(n=len(images)))
 	res = []
 	for img in images:
 		img = np.rot90(img, theta, axes=(row_axis - 1, col_axis - 1))
@@ -259,3 +258,10 @@ def addNoise(noise_typ, image):
 		gauss = gauss.reshape(row,col,ch)        
 		noisy = image + image * gauss
 		return noisy
+
+def chunk(l, chunk_size):
+	"""
+	Yields the content of @l in chunks of size @chunk_size
+	"""
+	for i in range(0, len(l), chunk_size):
+		yield l[i:i + chunk_size]

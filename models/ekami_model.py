@@ -5,7 +5,7 @@ from sklearn.metrics import fbeta_score
 from sklearn.model_selection import train_test_split
 
 import keras as k
-from keras.models import Sequential, Model as md
+from keras.models import Model as md
 from keras.layers.core import Dense, Dropout, Flatten
 from keras.layers.merge import Concatenate
 from keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization
@@ -47,7 +47,7 @@ class AmazonKerasClassifier(Model):
         x = Dense(512, activation='relu')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
-        x = Dense(len(self.data.labels), activation='softmax')(x)
+        x = Dense(len(self.data.labels), activation='sigmoid')(x)
         model = md(inputs=inp, outputs=x)
         self.model = model
 

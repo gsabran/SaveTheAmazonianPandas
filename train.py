@@ -8,11 +8,7 @@ import sys
 
 from constants import TRAIN_DATA_DIR
 from utils import get_uniq_name, remove
-from models.exception import XceptionCNN
-from models.vgg16 import VGG16CNN
-from models.ekami_model import AmazonKerasClassifier
-from models.simple_cnn import SimpleCNN
-from models.gui import GuiNet
+from models import Xception, VGG16, InceptionV3, DenseNet121, AmazonKerasClassifier, SimpleCNN, GuiNet
 from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
 from datasets.weather_dataset import WeatherDataset, FilteredDataset
@@ -96,6 +92,9 @@ if __name__ == "__main__":
 		elif args["cnn"] == "vgg16":
 			print("Using VGG16 architecture")
 			cnn = VGG16CNN(data, n_gpus=n_gpus, with_tta=args["tta"])
+		elif args["cnn"] == "inception":
+			print("Using Inception V3 architecture")
+			cnn = InceptionV3(data, n_gpus=n_gpus, with_tta=args["tta"])
 		elif args["cnn"] == "ekami":
 			print("Using Ekami architecture")
 			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus, with_tta=args["tta"])
@@ -103,6 +102,9 @@ if __name__ == "__main__":
 			print("Using GuiNet architecture")
 			weather_model = load_model(args["helper_model"])
 			cnn = GuiNet(weather_model, data, n_gpus=n_gpus, with_tta=args["tta"])
+		elif args["cnn"] == "dense121":
+			print("Using DenseNet-121 architecture")
+			cnn = DenseNet121(data, n_gpus=n_gpus, with_tta=args["tta"])
 		else:
 			print("Using simple model architecture")
 			cnn = SimpleCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
