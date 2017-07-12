@@ -26,9 +26,7 @@ class DenseNet121(Model):
 		x = GlobalAveragePooling2D()(x)
 		x = Dropout(0.25)(x)
 		# let's add a fully-connected layer
-		x = Dense(1024, activation="relu")(x)
-		x = Dropout(0.5)(x)
-		x = Dense(1024, activation="relu")(x)
+		x = Dense(256, activation="relu")(x)
 		x = Dropout(0.5)(x)
 		x = Dense(128, activation="relu")(x)
 		x = Dropout(0.25)(x)

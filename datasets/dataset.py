@@ -152,15 +152,15 @@ class Dataset(object):
 		Y = None
 		print("Reading inputs...")
 		with tqdm(total=len(dataset)) as pbar:
-			for f in dataset:
+			for i, f in enumerate(dataset):
 				file = f.split('/')[-1].split('.')[0]
 				x = self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape)
 				y = self.outputs[file]
 				if X is None:
-					X = np.array([]).reshape((0,) + x.shape)
-					Y = np.array([]).reshape((0,) + y.shape)
-				X.append(x)
-				Y.append(y)
+					X = np.zeros((len(dataset),) + x.shape)
+					Y = np.zeros((len(dataset),) + y.shape)
+				X[i] = x
+				Y[i] = y
 				pbar.update(1)
 		return [X, Y]
 

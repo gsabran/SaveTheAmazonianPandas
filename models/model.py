@@ -111,18 +111,18 @@ class Model(object):
 		checkpoint_path = "train/checkpoint.hdf5"
 		csv_logger = CSVLogger('train/training.log')
 		tensorboard = TensorBoard(log_dir='train/tensorboard', histogram_freq=1, write_graph=True, write_images=True)
-		# learning_rate_reduction = ReduceLROnPlateau(
-		# 	model=self,
-		# 	monitor='f2_val_score' if validating else 'acc',
-		# 	patience=3,
-		# 	verbose=1,
-		# 	factor=0.5,
-		# 	min_lr_factor=0.0001,
-		# 	mode='max',
-		# 	checkpoint_path=checkpoint_path if validating else None
-		# )
-		# callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
-		callbacks = [csv_logger, tensorboard]
+		learning_rate_reduction = ReduceLROnPlateau(
+			model=self,
+			monitor='f2_val_score' if validating else 'acc',
+			patience=5,
+			verbose=1,
+			factor=0.5,
+			min_lr_factor=0.0001,
+			mode='max',
+			checkpoint_path=checkpoint_path if validating else None
+		)
+		callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
+		# callbacks = [csv_logger, tensorboard]
 
 		if validating:
 			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
