@@ -61,6 +61,7 @@ class Dataset(object):
 			# samplewise_std_normalization=False,
 			# zca_whitening=False,
 			# rotation_range=180,
+			possible_rotations=[0, 90, 180, 270],
 			# width_shift_range=0.,
 			# height_shift_range=0.,
 			# shear_range=0.,
