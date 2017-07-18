@@ -23,6 +23,7 @@ class XceptionCNN(PretrainedModel):
 		return Dense(len(self.data.labels), activation='sigmoid')(x)
 
 	def _prepare_deep_training(self):
+		super(XceptionCNN, self)._prepare_deep_training()
 		for layer in self.model.layers[:54]:
 			layer.trainable = False
 		for layer in self.model.layers[54:]:
