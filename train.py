@@ -7,8 +7,8 @@ from keras import backend as K
 import sys
 
 from constants import TRAIN_DATA_DIR
-from utils import get_uniq_name, remove
-from models import Xception, VGG16, InceptionV3, DenseNet121, AmazonKerasClassifier, SimpleCNN, GuiNet
+from utils import get_uniq_name, remove, send_sms
+from models import Xception, VGG16, VGG19, InceptionV3, DenseNet121, AmazonKerasClassifier, SimpleCNN, GuiNet
 from models.parallel_model import get_gpu_max_number
 from datasets.dataset import Dataset
 from datasets.weather_dataset import WeatherDataset, FilteredDataset
@@ -46,79 +46,94 @@ if __name__ == "__main__":
 		parser.add_argument("--training-files", default=None, help="Files to use for training", type=str)
 		parser.add_argument("--validation-files", default=None, help="Files to use for validation", type=str)
 		parser.add_argument("--tta", default=False, help="Wether to use TTA when scoring / predicting", type=bool)
+		parser.add_argument("--sms", default=None, help="A phone number to send sms notifications", type=str)
 
 		args = vars(parser.parse_args())
 		print("args", args)
+		try:
 
-		N_EPOCH = args["epochs"]
-		if args["cpu_only"]:
-			n_gpus = 0
-		else:
-			n_gpus = args["gpu"]
-			if n_gpus == 0:
-				print("Error: cannot use 0 GPUs in non CPU only mode")
-				sys.exit(1)
-			if n_gpus > MAX_NUMBER_OF_GPUS:
-				print("Error: only {a} GPUs are available on this machine, while {b} have been requested".format(a=MAX_NUMBER_OF_GPUS, b=n_gpus))
-				sys.exit(1)
+			if args["data_proportion"] != 1.:
+				# identify what's probably a test run
+				sessionId = "partial-{s}".format(s=sessionId)
 
-		BATCH_SIZE = args["batch_size"] * (1 if args["cpu_only"] else n_gpus)
-		VALIDATION_RATIO = args["validation_ratio"]
+			N_EPOCH = args["epochs"]
+			if args["cpu_only"]:
+				n_gpus = 0
+			else:
+				n_gpus = args["gpu"]
+				if n_gpus == 0:
+					print("Error: cannot use 0 GPUs in non CPU only mode")
+					sys.exit(1)
+				if n_gpus > MAX_NUMBER_OF_GPUS:
+					print("Error: only {a} GPUs are available on this machine, while {b} have been requested".format(a=MAX_NUMBER_OF_GPUS, b=n_gpus))
+					sys.exit(1)
 
-		list_imgs = [f.split(".")[0] for f in sorted(os.listdir(TRAIN_DATA_DIR))]
-		list_imgs = random.sample(list_imgs, int(len(list_imgs) * args["data_proportion"]))
+			BATCH_SIZE = args["batch_size"] * (1 if args["cpu_only"] else n_gpus)
+			VALIDATION_RATIO = args["validation_ratio"]
 
-		training_files=None
-		validation_files=None
-		if args["training_files"] is not None:
-			with open(args["training_files"]) as f:
-				training_files = f.readline().split(",")
-		if args["validation_files"] is not None:
-			with open(args["validation_files"]) as f:
-				validation_files = f.readline().split(",")
+			list_imgs = [f.split(".")[0] for f in sorted(os.listdir(TRAIN_DATA_DIR))]
+			list_imgs = random.sample(list_imgs, int(len(list_imgs) * args["data_proportion"]))
 
-		if args["dataset"] == "weather":
-			data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
-		elif args["dataset"] == "weatherInInput":
-			data = WeatherInInputDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
-		elif args["dataset"] is not None:
-			data = FilteredDataset(list_imgs, args["dataset"], VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
-		else:
-			data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
+			training_files=None
+			validation_files=None
+			if args["training_files"] is not None:
+				with open(args["training_files"]) as f:
+					training_files = f.readline().split(",")
+			if args["validation_files"] is not None:
+				with open(args["validation_files"]) as f:
+					validation_files = f.readline().split(",")
 
-		if args["cnn"] == "xception":
-			print("Using Xception architecture")
-			cnn = XceptionCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
-		elif args["cnn"] == "vgg16":
-			print("Using VGG16 architecture")
-			cnn = VGG16CNN(data, n_gpus=n_gpus, with_tta=args["tta"])
-		elif args["cnn"] == "inception":
-			print("Using Inception V3 architecture")
-			cnn = InceptionV3(data, n_gpus=n_gpus, with_tta=args["tta"])
-		elif args["cnn"] == "ekami":
-			print("Using Ekami architecture")
-			cnn = AmazonKerasClassifier(data, n_gpus=n_gpus, with_tta=args["tta"])
-		elif args["cnn"] == "gui":
-			print("Using GuiNet architecture")
-			weather_model = load_model(args["helper_model"])
-			cnn = GuiNet(weather_model, data, n_gpus=n_gpus, with_tta=args["tta"])
-		elif args["cnn"] == "dense121":
-			print("Using DenseNet-121 architecture")
-			cnn = DenseNet121(data, n_gpus=n_gpus, with_tta=args["tta"])
-		else:
-			print("Using simple model architecture")
-			cnn = SimpleCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
-
-		if args["model"] != "":
-			print("Loading model {m}".format(m=args["model"]))
-			with open("train/training-files.csv") as f_training_files, open("train/validation-files.csv") as f_validation_files:
-				training_files = f_training_files.readline().split(",")
-				validation_files = f_validation_files.readline().split(",")
+			if args["dataset"] == "weather":
+				data = WeatherDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
+			elif args["dataset"] == "weatherInInput":
+				data = WeatherInInputDataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
+			elif args["dataset"] is not None:
+				data = FilteredDataset(list_imgs, args["dataset"], VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
+			else:
 				data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
-			cnn.model = load_model(args["model"])
 
-		print("Training for labels {labels}".format(labels=data.labels))
-		cnn.fit(n_epoch=N_EPOCH, batch_size=BATCH_SIZE, generating=args["generate_data"])
-		cnn.model.save(TRAINED_MODEL, overwrite=True)
-		copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
-		print("Done running")
+			if args["cnn"] == "xception":
+				print("Using Xception architecture")
+				cnn = Xception(data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "vgg16":
+				print("Using VGG16 architecture")
+				cnn = VGG16(data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "vgg19":
+				print("Using VGG19 architecture")
+				cnn = VGG19(data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "inception":
+				print("Using Inception V3 architecture")
+				cnn = InceptionV3(data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "ekami":
+				print("Using Ekami architecture")
+				cnn = AmazonKerasClassifier(data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "gui":
+				print("Using GuiNet architecture")
+				weather_model = load_model(args["helper_model"])
+				cnn = GuiNet(weather_model, data, n_gpus=n_gpus, with_tta=args["tta"])
+			elif args["cnn"] == "dense121":
+				print("Using DenseNet-121 architecture")
+				cnn = DenseNet121(data, n_gpus=n_gpus, with_tta=args["tta"])
+			else:
+				print("Using simple model architecture")
+				cnn = SimpleCNN(data, n_gpus=n_gpus, with_tta=args["tta"])
+
+			if args["model"] != "":
+				print("Loading model {m}".format(m=args["model"]))
+				with open("train/training-files.csv") as f_training_files, open("train/validation-files.csv") as f_validation_files:
+					training_files = f_training_files.readline().split(",")
+					validation_files = f_validation_files.readline().split(",")
+					data = Dataset(list_imgs, VALIDATION_RATIO, sessionId=sessionId, training_files=training_files, validation_files=validation_files)
+				cnn.model = load_model(args["model"])
+
+			print("Training for labels {labels}".format(labels=data.labels))
+			cnn.fit(n_epoch=N_EPOCH, batch_size=BATCH_SIZE, generating=args["generate_data"])
+			cnn.model.save(TRAINED_MODEL, overwrite=True)
+			copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
+			print("Done running")
+			if args["sms"] is not None:
+				send_sms("Done training", args["sms"])
+		except Exception as e:
+			if args["sms"] is not None:
+				send_sms("Failed to run training: {error}".format(error=str(e)), args["sms"])
+			print("Error:", e)

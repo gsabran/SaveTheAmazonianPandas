@@ -61,18 +61,15 @@ class Dataset(object):
 			# samplewise_std_normalization=False,
 			# zca_whitening=False,
 			# rotation_range=180,
-			possible_rotations=[0, 90, 180, 270],
 			# width_shift_range=0.,
 			# height_shift_range=0.,
 			# shear_range=0.,
-			zoom_range=0.15,
+			# zoom_range=0.15,
 			# channel_shift_range=0.,
 			fill_mode='reflect',
 			# cval=0.,
-			horizontal_flip=True,
-			vertical_flip=True,
 			# rescale=None,
-			# preprocessing_function= lambda img: addNoise("gauss", img)
+			preprocessing_function= lambda img: rotate_images(img, np.random.choice(range(4)), flip=np.random.random() < 0.5)
 		)
 		self._cached_training_set = None
 		self._cached_validation_set = None

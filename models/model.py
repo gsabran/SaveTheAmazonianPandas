@@ -114,9 +114,9 @@ class Model(object):
 		learning_rate_reduction = ReduceLROnPlateau(
 			model=self,
 			monitor='f2_val_score' if validating else 'acc',
-			patience=5,
+			patience=3,
 			verbose=1,
-			factor=0.5,
+			factor=0.1,
 			min_lr_factor=0.0001,
 			mode='max',
 			checkpoint_path=checkpoint_path if validating else None

@@ -350,7 +350,6 @@ class ImageDataGenerator(object):
         zca_whitening: apply ZCA whitening.
         zca_epsilon: epsilon for ZCA whitening. Default is 1e-6.
         rotation_range: degrees (0 to 180).
-        possible_rotations: an array of rotations in degrees to sample from, like [0, 90]
         width_shift_range: fraction of total width.
         height_shift_range: fraction of total height.
         shear_range: shear intensity (shear angle in radians).
@@ -363,8 +362,6 @@ class ImageDataGenerator(object):
             is 'nearest'.
         cval: value used for points outside the boundaries when fill_mode is
             'constant'. Default is 0.
-        horizontal_flip: whether to randomly flip images horizontally.
-        vertical_flip: whether to randomly flip images vertically.
         rescale: rescaling factor. If None or 0, no rescaling is applied,
             otherwise we multiply the data by the value provided
             (before applying any other transformation).
@@ -388,7 +385,6 @@ class ImageDataGenerator(object):
                  zca_whitening=False,
                  zca_epsilon=1e-6,
                  rotation_range=0.,
-                 possible_rotations=None,
                  width_shift_range=0.,
                  height_shift_range=0.,
                  shear_range=0.,
@@ -396,8 +392,6 @@ class ImageDataGenerator(object):
                  channel_shift_range=0.,
                  fill_mode='nearest',
                  cval=0.,
-                 horizontal_flip=False,
-                 vertical_flip=False,
                  rescale=None,
                  preprocessing_function=None,
                  data_format=None):
@@ -412,7 +406,6 @@ class ImageDataGenerator(object):
         self.zca_whitening = zca_whitening
         self.zca_epsilon = zca_epsilon
         self.rotation_range = rotation_range
-        self.possible_rotations = possible_rotations
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
         self.shear_range = shear_range
@@ -420,8 +413,6 @@ class ImageDataGenerator(object):
         self.channel_shift_range = channel_shift_range
         self.fill_mode = fill_mode
         self.cval = cval
-        self.horizontal_flip = horizontal_flip
-        self.vertical_flip = vertical_flip
         self.rescale = rescale
         self.preprocessing_function = preprocessing_function
 
@@ -552,9 +543,6 @@ class ImageDataGenerator(object):
         else:
             theta = 0
 
-        if self.possible_rotations is not None:
-            theta = np.pi / 180 * np.random.choice(self.possible_rotations, 1)[0]
-
         if self.height_shift_range:
             tx = np.random.uniform(-self.height_shift_range, self.height_shift_range) * x.shape[img_row_axis]
         else:
@@ -613,13 +601,6 @@ class ImageDataGenerator(object):
             x = random_channel_shift(x,
                                      self.channel_shift_range,
                                      img_channel_axis)
-        if self.horizontal_flip:
-            if np.random.random() < 0.5:
-                x = flip_axis(x, img_col_axis)
-
-        if self.vertical_flip:
-            if np.random.random() < 0.5:
-                x = flip_axis(x, img_row_axis)
 
         return x
 
