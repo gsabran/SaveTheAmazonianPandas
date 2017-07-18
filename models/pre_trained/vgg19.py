@@ -1,7 +1,8 @@
 import numpy as np
-from keras.applications.vgg16 import VGG19
+from keras.applications.vgg19 import VGG19
 from keras.applications.imagenet_utils import preprocess_input
-from keras.layers import Flatten
+from keras.layers import Flatten, Input
+from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Dense, Dropout
 
 from .pretrained_model import PretrainedModel

@@ -395,8 +395,6 @@ class ImageDataGenerator(object):
                  rescale=None,
                  preprocessing_function=None,
                  data_format=None):
-        if possible_rotations is not None and rotation_range != 0:
-            raise ValueError("possible_rotations and rotation_range are not compatible")
         if data_format is None:
             data_format = K.image_data_format()
         self.featurewise_center = featurewise_center
