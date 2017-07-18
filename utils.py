@@ -11,6 +11,7 @@ from scipy.ndimage.interpolation import rotate
 import os
 import math
 from keras import backend as K
+import requests
 
 from bisect import bisect
 from random import random
@@ -265,3 +266,14 @@ def chunk(l, chunk_size):
 	"""
 	for i in range(0, len(l), chunk_size):
 		yield l[i:i + chunk_size]
+
+def send_sms(text, to_number):
+	"""
+	Send a sms notification
+	"""
+	url = 'https://api.twilio.com/2010-04-01/Accounts/ACd5157eb30539ec38843de4ba1080ab89/Messages.json'
+	return requests.post(
+		url,
+		data={'From': '+18478071140', 'To': to_number, 'Body': text},
+		auth=(os.environ['TW_SID'], os.environ['TW_TOKEN'])
+	).text
