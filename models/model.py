@@ -121,8 +121,7 @@ class Model(object):
 			mode='max',
 			checkpoint_path=checkpoint_path if validating else None
 		)
-		callbacks = [csv_logger, tensorboard, learning_rate_reduction, Logger()]
-		# callbacks = [csv_logger, tensorboard]
+		callbacks = [csv_logger, tensorboard]
 
 		if validating:
 			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
@@ -153,6 +152,7 @@ class Model(object):
 			)
 			callbacks.append(validationCheckpoint)
 		callbacks.append(Logger())
+		callbacks.append(learning_rate_reduction)
 
 		if generating:
 			print("Fitting with generated data")
