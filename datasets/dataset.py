@@ -69,7 +69,7 @@ class Dataset(object):
 			fill_mode='reflect',
 			# cval=0.,
 			# rescale=None,
-			preprocessing_function= lambda img: rotate_images(img, np.random.choice(range(4)), flip=np.random.random() < 0.5)
+			preprocessing_function= lambda img: rotate_images([img], np.random.choice(range(4)), flip=np.random.random() < 0.5)[0]
 		)
 		self._cached_training_set = None
 		self._cached_validation_set = None

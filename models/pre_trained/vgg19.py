@@ -1,4 +1,5 @@
 import numpy as np
+import keras
 from keras.applications.vgg19 import VGG19
 from keras.applications.imagenet_utils import preprocess_input
 from keras.layers import Flatten, Input
@@ -15,7 +16,8 @@ class VGG19CNN(PretrainedModel):
   def _load_pretrained_model(self):
     inp = Input(shape=self.input_shape)
     x = BatchNormalization(input_shape=self.input_shape)(inp)
-    return VGG19(include_top=False, input_shape=self.input_shape, input_tensor=x)
+    x = VGG19(include_top=False, input_shape=self.input_shape)(x)
+    return keras.models.Model(inputs=inp, outputs=x)
 
   def _add_top_dense_layers(self, x):
     x = Flatten()(x)

@@ -61,7 +61,7 @@ class PretrainedModel(Model):
 		print("Fitting top dense layers")
 		self._prepare_shalow_training()
 		self.compile(learn_rate=0.001)
-		super(PretrainedModel, self).fit(5, batch_size, validating=False, generating=generating)
+		super(PretrainedModel, self).fit(10, batch_size, validating=False, generating=generating)
 
 		self._prepare_deep_training()
 
