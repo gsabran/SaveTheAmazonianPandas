@@ -97,14 +97,14 @@ class Model(object):
 		else:
 			return self.model.predict(data_set, batch_size=batch_size, verbose=1)
 
-	def fit(self, n_epoch, batch_size, validating=True, generating=False):
+	def fit(self, n_epoch, batch_size, validating=True, augmenting=False):
 		"""
 		Fit the model
 		n_epoch: the max number of epoch to run
 		batch_size: the size of each training batch
 		validating: wether validation should occur after each batch,
 			if so training will terinate as soon as validation stop increasing
-		generating: wether the data should be generated on the fly
+		augmenting: wether the data should be generated on the fly
 		"""
 
 		print("Fitting on data of size", self.input_shape)
@@ -124,28 +124,25 @@ class Model(object):
 		callbacks = [csv_logger, tensorboard]
 
 		if validating:
-			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
-			(x_validate, y_validate) = self.data.validationSet(self.image_data_fmt, self.input_shape)
-
-			def score(data_set, expectations):
+			# def score(data_set, expectations):
+			def score(file_names):
 				tta = self.tta_enable
 				self.tta_enable = False
-				rawPredictions = self.predict_proba(data_set)
+				scores = []
+				for batch_data, expectations in data.batch_generator(file_names, batch_size, augment=False, balance=False):
+					rawPredictions = self.predict_proba(batch_data)
+					predictions = get_predictions(rawPredictions, self.data.labels)
+					for prediction, expectation in zip(predictions, expectations):
+						scores.append(F2Score(
+							prediction,
+							[LABELS[i] for i, x in enumerate(expectation) if x == 1 and i in self.data.label_idx]
+						))
 				self.tta_enable = tta
-
-				predictions = get_predictions(rawPredictions, self.data.labels)
-				predictions = np.array([x for x in predictions])
-				return np.mean([F2Score(
-					prediction,
-					[LABELS[i] for i, x in enumerate(expectation) if x == 1 and i in self.data.label_idx]
-				) for prediction, expectation in zip(predictions, expectations)])
+				return np.mean(scores)
 
 			validationCheckpoint = ValidationCheckpoint(
 				scoring=score,
-				training_input=x_train,
-				training_output=y_train,
-				validation_input=x_validate,
-				validation_output=y_validate,
+				data=self.data,
 				checkpoint_path=checkpoint_path,
 				sessionId=self.data.sessionId,
 				patience=10
@@ -154,20 +151,10 @@ class Model(object):
 		callbacks.append(Logger())
 		callbacks.append(learning_rate_reduction)
 
-		if generating:
-			print("Fitting with generated data")
-			return self.model.fit_generator(
-				self.data.batch_generator(batch_size, self.image_data_fmt, self.input_shape, balancing=False),
-				int(len(self.data.training_files) / batch_size),
-				verbose=1,
-				callbacks=callbacks,
-				epochs=n_epoch
-			)
-		else:
-			(x_train, y_train) = self.data.trainingSet(self.image_data_fmt, self.input_shape)
-			return self.model.fit(x_train, y_train,
-				batch_size=batch_size,
-				verbose=1,
-				callbacks=callbacks,
-				epochs=n_epoch
-			)
+		return self.model.fit_generator(
+			self.data.batch_generator(self.data.training_files, batch_size, augment=augmenting, balance=False),
+			int(len(self.data.training_files) / batch_size),
+			verbose=1,
+			callbacks=callbacks,
+			epochs=n_epoch
+		)

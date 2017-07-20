@@ -55,6 +55,6 @@ class AmazonKerasClassifier(Model):
         opt = Adam(lr=learn_rate)
         self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-    def fit(self, n_epoch, batch_size, validating=True, generating=False, learn_rate=0.001):
+    def fit(self, n_epoch, batch_size, validating=True, augmenting=False, learn_rate=0.001):
         self.compile(learn_rate)
-        super(AmazonKerasClassifier, self).fit(n_epoch, batch_size, validating=validating, generating=generating)
+        super(AmazonKerasClassifier, self).fit(n_epoch, batch_size, validating=validating, augmenting=augmenting)

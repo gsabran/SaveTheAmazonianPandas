@@ -8,7 +8,7 @@ from scipy.misc import imresize
 import numpy as np
 
 from constants import LABELS, TRAIN_DATA_DIR
-from utils import files_proba, files_and_cdf_from_proba, pick, get_labels_dict, get_resized_image, addNoise, rotate_images
+from utils import tf_idf, idf, pick, get_labels_dict, get_resized_image, addNoise, rotate_images, get_inputs_shape
 
 class Dataset(object):
 	"""
@@ -38,7 +38,7 @@ class Dataset(object):
 		self.label_idx = label_idx
 		self.labels = np.array([LABELS[k] for k in label_idx])
 
-		self.outputs = {k: v[self.label_idx] for k, v in get_labels_dict().items()} # outputs might contain files that are unused
+		self.outputs = { k: v[self.label_idx] for k, v in get_labels_dict().items() } # outputs might contain files that are unused
 
 		list_files = self.select_files(list_files)
 		if training_files is None or validation_files is None:
@@ -50,8 +50,8 @@ class Dataset(object):
 		self.validation_files = validation_files
 
 		training_files_set = set(self.training_files)
-		self.proba = files_proba({f: labels for f, labels in self.outputs.items() if f in training_files_set}, self.labels)
-		self.files_and_cdf = files_and_cdf_from_proba(self.proba)
+		self.idf = idf({f: labels for f, labels in self.outputs.items() if f in training_files_set}, self.labels)
+		self.image_data_fmt, self.input_shape, _ = get_inputs_shape()
 
 		self._write_sets()
 		self.image_data_generator = ImageDataGenerator(
@@ -81,47 +81,36 @@ class Dataset(object):
 		"""
 		return list_files
 
-	def batch_generator(self, n, image_data_fmt, input_shape, balancing=True, augment=True):
+	def batch_generator(self, file_names, batch_size, balance=False, augment=True):
+		print(balance, augment)
 		"""
-		Generate batches fo size n, using images from the original data set,
+		Generate batches fo size batch_size, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
 		"""
+		if augment:
+			print("Using augmented data")
+
 		input_length = self.input_length
-		files, cdf = self.files_and_cdf
-		data = self.trainingSet(image_data_fmt, input_shape)
-		if input_length == 1:
-			data = [i for i in data]
-			data[0] = [data[0]]
-
-		data_dict = {}
-		for i, f in enumerate(self.training_files):
-			if input_shape:
-				data_dict[f] = (
-					[imresize(data[0][0][i], input_shape)] + [data[0][k + 1][i] for k in range(input_length - 1)],
-					data[1][i]
-				)
-			else:
-				data_dict[f] = (
-					[data[0][k][i] for k in range(input_length)],
-					data[1][i]
-				)
+		
+		i = 0
 		while True:
-			if balancing:
-				batch_files = pick(n, files, cdf)
+			if balance:
+				_tf_idf = tf_idf(file_names, self.idf)
+				cdf = np.cumsum(list(map(lambda i: i[1], _tf_idf)))
+				batch_files = pick(batch_size, files, cdf)
 			else:
-				batch_files = random.sample(files, n)
-			outputs = np.array([data_dict[f][1] for f in batch_files])
-			inputs = [np.array([data_dict[f][0][k].astype(K.floatx()) for f in batch_files]) for k in range(input_length)]
+				batch_files = file_names[i:i+batch_size]
+			i += 1
 
+			inputs, outputs = self.getXY(batch_files)
 			if not augment:
-				if input_length == 1:
-					yield (inputs[0], outputs)
-				else:
-					yield (inputs, outputs)
+				yield (inputs, outputs)
 			else:
-				batch_x = [np.zeros(tuple([n] + list(inputs[k].shape)[1:]), dtype=K.floatx()) for k in range(input_length)]
-				for i in range(n):
-					for k in range(input_length):
+				if input_length == 1:
+					inputs = [inputs]
+				batch_x = [np.zeros(tuple([batch_size] + list(inputs[k].shape)[1:]), dtype=K.floatx()) for k in range(input_length)]
+				for i in range(batch_size):
+					for k in range(1, input_length):
 						batch_x[k][i] = inputs[k][i]
 
 				for i, inp in enumerate(inputs[0]):
@@ -144,49 +133,52 @@ class Dataset(object):
 				f.write(','.join(data))	
 			copyfile(filename, "train/archive/{id}-{file}.csv".format(id=self.sessionId, file=file))
 
-	def _xyData(self, image_data_fmt, isTraining, input_shape):
-		dataset = self.training_files if isTraining else self.validation_files
+	def getXY(self, file_names):
 		X = None
 		Y = None
 		print("Reading inputs...")
-		with tqdm(total=len(dataset)) as pbar:
-			for i, f in enumerate(dataset):
+		with tqdm(total=len(file_names)) as pbar:
+			for i, f in enumerate(file_names):
 				file = f.split('/')[-1].split('.')[0]
-				x = self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape)
+				x = self.get_input(f, TRAIN_DATA_DIR)
 				y = self.outputs[file]
 				if X is None:
-					X = np.zeros((len(dataset),) + x.shape)
-					Y = np.zeros((len(dataset),) + y.shape)
+					X = np.zeros((len(file_names),) + x.shape)
+					Y = np.zeros((len(file_names),) + y.shape)
 				X[i] = x
 				Y[i] = y
 				pbar.update(1)
 		return [X, Y]
 
-	def trainingSet(self, image_data_fmt, input_shape):
+	def __xyData(self, isTraining):
+		dataset = self.training_files if isTraining else self.validation_files
+		return self.getXY(dataset)
+
+	def trainingSet(self):
 		"""
 		The training set for a Keras model
 		"""
 		if self._cached_training_set is None:
-			self._cached_training_set = self._xyData(image_data_fmt, True, input_shape)
+			self._cached_training_set = self.__xyData(isTraining=True)
 		return self._cached_training_set
 
-	def validationSet(self, image_data_fmt, input_shape):
+	def validationSet(self):
 		"""
 		The validation set for a Keras model
 		"""
 		if self._cached_validation_set is None:
-			self._cached_validation_set = self._xyData(image_data_fmt, False, input_shape)
+			self._cached_validation_set = self.__xyData(isTraining=False)
 		return self._cached_validation_set
 
-	def get_input(self, image_name, data_dir, image_data_fmt, input_shape):
+	def get_input(self, image_name, data_dir):
 		"""
 		Return the input corresponding to one image file
 		"""
 		return get_resized_image(
 			image_name,
 			data_dir,
-			image_data_fmt,
-			input_shape,
+			self.image_data_fmt,
+			self.input_shape,
 			self._image_normalization
 		)
 

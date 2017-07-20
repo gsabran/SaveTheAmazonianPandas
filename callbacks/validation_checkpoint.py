@@ -11,13 +11,10 @@ class ValidationCheckpoint(Callback):
 	- Parameter sessionId: an id to easily identify the running session
 	"""
 
-	def __init__(self, scoring, training_input, training_output, validation_input, validation_output, checkpoint_path, sessionId, patience=1):
+	def __init__(self, scoring, data, checkpoint_path, sessionId, patience=1):
 		super(ValidationCheckpoint, self).__init__()
 		self.scoring = scoring
-		self.training_input = training_input
-		self.training_output = training_output
-		self.validation_input = validation_input
-		self.validation_output = validation_output
+		self.data = data
 		self.best_score = 0
 		self.best_epoch = -1
 		self.patience = patience
@@ -29,14 +26,14 @@ class ValidationCheckpoint(Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		logs = logs if logs is not None else {}
 		print("\nScoring validation dataset...".format(epoch=epoch))
-		train_score = self.scoring(self.training_input, self.training_output)
+		train_score = self.scoring(self.data.training_files)
 		logs["f2_train_score"] = train_score
 
 		if len(self.validation_input) == 0:
 			print("No data provided to validate model")
 			score = 0.0
 		else:
-			score = self.scoring(self.validation_input, self.validation_output)
+			score = self.scoring(self.data.validation_files)
 		print("\nValidation score is {score} (previous score was {previous_score})".format(score=score, previous_score=self.best_score))
 		print("Traning score is {score}".format(score=train_score))
 		logs["f2_val_score"] = score

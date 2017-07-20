@@ -143,31 +143,26 @@ def get_generated_images(originalImageFileName, ext="jpg"):
 		newFileName = "{n}--{i}.{ext}".format(n=originalImageFileName, i=i, ext=ext)
 		yield os.path.join(DATA_DIR, newFileName)
 
-def files_proba(file_labels, labels):
+def idf(file_labels, labels):
 	# file_labels is a dict of (img -> binary vector of labels)
-	train_tags = file_labels
 
 	count_labels = np.array([0] * len(labels))
-	for img in train_tags:
-		count_labels += train_tags[img]
-	n_doc = len(train_tags)
+	for img in file_labels:
+		count_labels += file_labels[img]
+	n_doc = len(file_labels)
 	# idf is a vector representing the idf of each tag
 	# We've modified this idf by removing the log here, which leads
 	# to more balanced sampling
-	idf = np.array([n_doc / (1 + count_labels[i]) for i, _ in enumerate(labels)])
+	return np.array([n_doc / (1 + count_labels[i]) for i, _ in enumerate(labels)])
 
+def tf_idf(file_labels, idf):
 	tf_idf = {}
-	for img in train_tags:
-		# We use train_tags[img] as a mask over the idf of each tag and sum
-		tf_idf[img] = (np.array(train_tags[img]) * idf).sum()
+	for img in file_labels:
+		# We use file_labels[img] as a mask over the idf of each tag and sum
+		tf_idf[img] = (np.array(file_labels[img]) * idf).sum()
 
 	sum_tf = sum(tf_idf.values())
-	proba = {img: tf_idf[img] / sum_tf for img in tf_idf}
-	return proba
-
-def files_and_cdf_from_proba(proba):
-	files_probs = sorted(proba.items(), key=lambda i: i[1])
-	return list(map(lambda i: i[0], files_probs)), np.cumsum(list(map(lambda i: i[1], files_probs)))
+	return { img: tf_idf[img] / sum_tf for img in tf_idf }
 
 def pick(n, files, cdf):
 	return [files[bisect(cdf, random())] for i in range(n)]

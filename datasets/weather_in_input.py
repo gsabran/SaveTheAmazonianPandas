@@ -13,7 +13,7 @@ class WeatherInInputDataset(Dataset):
   
   input_length = 2
 
-  def _xyData(self, image_data_fmt, isTraining, input_shape):
+  def _xyData(self, isTraining):
     dataset = self.training_files if isTraining else self.validation_files
     Y = []
     X = []
@@ -22,14 +22,14 @@ class WeatherInInputDataset(Dataset):
     with tqdm(total=len(dataset)) as pbar:
       for f in dataset:
         file = f.split('/')[-1].split('.')[0]
-        img, weather_tags = self.get_input(f, TRAIN_DATA_DIR, image_data_fmt, input_shape)
+        img, weather_tags = self.get_input(f, TRAIN_DATA_DIR)
         X.append(img)
         X2.append(weather_tags)
         Y.append(self.outputs[file])
         pbar.update(1)
     return ([np.array(X), np.array(X2)], np.array(Y))
 
-  def get_input(self, image_name, data_dir, image_data_fmt, input_shape):
+  def get_input(self, image_name, data_dir):
     """
     Return the input corresponding to one image file
     """

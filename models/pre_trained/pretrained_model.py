@@ -52,7 +52,7 @@ class PretrainedModel(Model):
 		# opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 		self.model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['binary_crossentropy', 'accuracy'])
 
-	def fit(self, n_epoch, batch_size, validating=True, generating=False):
+	def fit(self, n_epoch, batch_size, validating=True, augmenting=False):
 		# 0-10: 0.001
 
 		# 10-20: 0.0001
@@ -61,7 +61,7 @@ class PretrainedModel(Model):
 		print("Fitting top dense layers")
 		self._prepare_shalow_training()
 		self.compile(learn_rate=0.001)
-		super(PretrainedModel, self).fit(10, batch_size, validating=False, generating=generating)
+		super(PretrainedModel, self).fit(10, batch_size, validating=False, augmenting=augmenting)
 
 		self._prepare_deep_training()
 
@@ -69,12 +69,12 @@ class PretrainedModel(Model):
 		if self.n_gpus > 1:
 			super(PretrainedModel, self).paralelize()
 		self.compile(learn_rate=0.0001)
-		super(PretrainedModel, self).fit(30, batch_size, validating=validating, generating=generating)
+		super(PretrainedModel, self).fit(30, batch_size, validating=validating, augmenting=augmenting)
 
 		# print("Fitting lower conv layers II")
 		# self.compile(learn_rate=0.0001)
-		# super(PretrainedModel, self).fit(10, batch_size, validating=validating, generating=generating)
+		# super(PretrainedModel, self).fit(10, batch_size, validating=validating, augmenting=augmenting)
 
 		# print("Fitting lower conv layers III")
 		# self.compile(learn_rate=0.00001)
-		# return super(PretrainedModel, self).fit(5, batch_size, validating=validating, generating=generating)
+		# return super(PretrainedModel, self).fit(5, batch_size, validating=validating, augmenting=augmenting)

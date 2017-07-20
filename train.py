@@ -130,7 +130,7 @@ if __name__ == "__main__":
 				cnn.model = load_model(args["model"])
 
 			print("Training for labels {labels}".format(labels=data.labels))
-			cnn.fit(n_epoch=N_EPOCH, batch_size=BATCH_SIZE, generating=args["data_augmentation"])
+			cnn.fit(n_epoch=N_EPOCH, batch_size=BATCH_SIZE, augmenting=args["data_augmentation"])
 			cnn.model.save(TRAINED_MODEL, overwrite=True)
 			copyfile(TRAINED_MODEL, "train/archive/{f}-model.h5".format(f=sessionId))
 			print("Done running")

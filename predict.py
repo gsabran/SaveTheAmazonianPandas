@@ -31,7 +31,7 @@ def predict(model, image_files, data_dir, image_data_fmt, input_shape, labels=LA
 		inputs = [[] for i in range(input_length)]
 	with tqdm(total=len(image_files)) as pbar:
 		for f in image_files:
-			img_input = model.data.get_input(f, data_dir, image_data_fmt, input_shape)
+			img_input = model.data.get_input(f, data_dir)
 			if input_length != 1:
 				for i in range(input_length):
 					inputs[i].append(img_input[i])
