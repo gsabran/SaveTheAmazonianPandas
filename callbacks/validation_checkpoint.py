@@ -29,7 +29,7 @@ class ValidationCheckpoint(Callback):
 		train_score = self.scoring(self.data.training_files)
 		logs["f2_train_score"] = train_score
 
-		if len(self.validation_input) == 0:
+		if len(self.data.validation_files) == 0:
 			print("No data provided to validate model")
 			score = 0.0
 		else:

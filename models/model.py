@@ -81,21 +81,19 @@ class Model(object):
 		image[:, :, 2] -= 0.4464766
 		return image
 
-	def predict_proba(self, data_set, batch_size=64):
+	def predict_proba(self, data_set, batch_size=64, verbose=False):
 		"""
 		For each input, returns a probability prediction for each tag
 		"""
 		if self.tta_enable:
 			rawPredictions = np.zeros((len(tta), len(data_set), len(self.data.labels)))
-			with tqdm(total=len(data_set)) as pbar:
-				for c_i, c in enumerate(chunk(data_set, batch_size)):
-					tta = self.data.generate_tta(c)
-					for i, ds in enumerate(tta):
-						rawPredictions[i, c_i * batch_size:(c_i + 1) * batch_size, :] = self.model.predict(ds, batch_size=batch_size, verbose=0)
-						pbar.update((batch_size * 1.) / len(tta))
+			for c_i, c in enumerate(chunk(data_set, batch_size)):
+				tta = self.data.generate_tta(c)
+				for i, ds in enumerate(tta):
+					rawPredictions[i, c_i * batch_size:(c_i + 1) * batch_size, :] = self.model.predict(ds, batch_size=batch_size, verbose=0)
 			return self._merge_tta_score(rawPredictions)
 		else:
-			return self.model.predict(data_set, batch_size=batch_size, verbose=1)
+			return self.model.predict(data_set, batch_size=batch_size, verbose=verbose)
 
 	def fit(self, n_epoch, batch_size, validating=True, augmenting=False):
 		"""
@@ -124,20 +122,21 @@ class Model(object):
 		callbacks = [csv_logger, tensorboard]
 
 		if validating:
-			# def score(data_set, expectations):
 			def score(file_names):
 				tta = self.tta_enable
 				self.tta_enable = False
 				scores = []
-				for batch_data, expectations in data.batch_generator(file_names, batch_size, augment=False, balance=False):
-					rawPredictions = self.predict_proba(batch_data)
-					predictions = get_predictions(rawPredictions, self.data.labels)
-					for prediction, expectation in zip(predictions, expectations):
-						scores.append(F2Score(
-							prediction,
-							[LABELS[i] for i, x in enumerate(expectation) if x == 1 and i in self.data.label_idx]
-						))
-				self.tta_enable = tta
+				with tqdm(total=len(file_names)) as pbar:
+					for batch_data, expectations in self.data.batch_generator(file_names, batch_size, augment=False, balance=False):
+						rawPredictions = self.predict_proba(batch_data, verbose=False)
+						predictions = get_predictions(rawPredictions, self.data.labels)
+						for prediction, expectation in zip(predictions, expectations):
+							scores.append(F2Score(
+								prediction,
+								[LABELS[i] for i, x in enumerate(expectation) if x == 1 and i in self.data.label_idx]
+							))
+							pbar.update(1.)
+					self.tta_enable = tta
 				return np.mean(scores)
 
 			validationCheckpoint = ValidationCheckpoint(

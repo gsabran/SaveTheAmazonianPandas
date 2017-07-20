@@ -1,4 +1,3 @@
-from tqdm import tqdm
 import numpy as np
 
 from .dataset import Dataset
@@ -13,21 +12,22 @@ class WeatherInInputDataset(Dataset):
   
   input_length = 2
 
-  def _xyData(self, isTraining):
-    dataset = self.training_files if isTraining else self.validation_files
-    Y = []
-    X = []
-    X2 = []
-    print("Reading inputs...")
-    with tqdm(total=len(dataset)) as pbar:
-      for f in dataset:
-        file = f.split('/')[-1].split('.')[0]
-        img, weather_tags = self.get_input(f, TRAIN_DATA_DIR)
-        X.append(img)
-        X2.append(weather_tags)
-        Y.append(self.outputs[file])
-        pbar.update(1)
-    return ([np.array(X), np.array(X2)], np.array(Y))
+  def getXY(self, file_names):
+    Y = None
+    X = None
+    X2 = None
+    for f in file_names:
+      file = f.split('/')[-1].split('.')[0]
+      img, weather_tags = self.get_input(f, TRAIN_DATA_DIR)
+      y = self.outputs[file]
+      if X is None:
+        X = np.zeros((len(file_names),) + img.shape)
+        X2 = np.zeros((len(file_names),) + weather_tags.shape)
+        Y = np.zeros((len(file_names),) + y.shape)
+      X.append(img)
+      X2.append(weather_tags)
+      Y.append(y)
+    return [[np.array(X), np.array(X2)], np.array(Y)]
 
   def get_input(self, image_name, data_dir):
     """

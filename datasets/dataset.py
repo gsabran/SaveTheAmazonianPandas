@@ -1,7 +1,6 @@
 import random
 from shutil import copyfile
 import os
-from tqdm import tqdm
 from keras import backend as K
 from datasets.image_generation import ImageDataGenerator
 from scipy.misc import imresize
@@ -82,7 +81,6 @@ class Dataset(object):
 		return list_files
 
 	def batch_generator(self, file_names, batch_size, balance=False, augment=True):
-		print(balance, augment)
 		"""
 		Generate batches fo size batch_size, using images from the original data set,
 			selecting them according to some tfidf proportions and rotating them
@@ -91,16 +89,19 @@ class Dataset(object):
 			print("Using augmented data")
 
 		input_length = self.input_length
+		n = len(file_names)
 		
 		i = 0
 		while True:
+			if i >= n:
+				return
 			if balance:
 				_tf_idf = tf_idf(file_names, self.idf)
 				cdf = np.cumsum(list(map(lambda i: i[1], _tf_idf)))
 				batch_files = pick(batch_size, files, cdf)
 			else:
 				batch_files = file_names[i:i+batch_size]
-			i += 1
+			i += batch_size
 
 			inputs, outputs = self.getXY(batch_files)
 			if not augment:
@@ -136,18 +137,15 @@ class Dataset(object):
 	def getXY(self, file_names):
 		X = None
 		Y = None
-		print("Reading inputs...")
-		with tqdm(total=len(file_names)) as pbar:
-			for i, f in enumerate(file_names):
-				file = f.split('/')[-1].split('.')[0]
-				x = self.get_input(f, TRAIN_DATA_DIR)
-				y = self.outputs[file]
-				if X is None:
-					X = np.zeros((len(file_names),) + x.shape)
-					Y = np.zeros((len(file_names),) + y.shape)
-				X[i] = x
-				Y[i] = y
-				pbar.update(1)
+		for i, f in enumerate(file_names):
+			file = f.split('/')[-1].split('.')[0]
+			x = self.get_input(f, TRAIN_DATA_DIR)
+			y = self.outputs[file]
+			if X is None:
+				X = np.zeros((len(file_names),) + x.shape)
+				Y = np.zeros((len(file_names),) + y.shape)
+			X[i] = x
+			Y[i] = y
 		return [X, Y]
 
 	def __xyData(self, isTraining):
